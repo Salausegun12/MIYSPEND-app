@@ -2,9 +2,10 @@ import React from "react";
 import { Text, StyleSheet, TextStyle } from "react-native";
 import { Colors } from "../../constants/colors";
 import { Typography } from "../../constants/typography";
+import { koboToNaira } from "../../utils/money";
 
 interface AmountTextProps {
-  amount: number;
+  amount: number; // amount in kobo
   currency?: string;
   small?: boolean;
   style?: TextStyle;
@@ -18,7 +19,11 @@ export function AmountText({
   style,
   textStyles,
 }: AmountTextProps) {
-  const formatted = amount.toLocaleString("en-NG");
+  const naira = koboToNaira(amount);
+  const formatted = naira.toLocaleString("en-NG", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  });
 
   return (
     <Text

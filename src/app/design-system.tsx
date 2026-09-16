@@ -66,9 +66,9 @@ export default function DesignSystemPreview() {
 
       <SectionHeader title="Amount Display" />
       <Card>
-        <AmountText amount={48750} />
+        <AmountText amount={4875000} />
         <View style={{ height: Spacing.sm }} />
-        <AmountText amount={1250000} small />
+        <AmountText amount={125000000} small />
       </Card>
 
       <Divider />
