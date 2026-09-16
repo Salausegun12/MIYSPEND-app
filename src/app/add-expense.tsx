@@ -10,6 +10,9 @@ import {
   Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import DateTimePicker, {
+  DateTimePickerEvent,
+} from "@react-native-community/datetimepicker";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSQLiteContext } from "expo-sqlite";
@@ -41,8 +44,19 @@ function getNowTimeString(): string {
   return `${h}:${min}`;
 }
 
+function dateStringToDate(dateStr: string): Date {
+  return new Date(dateStr + "T00:00:00");
+}
+
+function timeStringToDate(timeStr: string): Date {
+  const [h, m] = timeStr.split(":").map(Number);
+  const d = new Date();
+  d.setHours(h, m, 0, 0);
+  return d;
+}
+
 function formatDisplayDate(dateStr: string): string {
-  const d = new Date(dateStr + "T00:00:00");
+  const d = dateStringToDate(dateStr);
   return d.toLocaleDateString("en-NG", {
     weekday: "short",
     day: "numeric",
@@ -58,6 +72,19 @@ function formatDisplayTime(timeStr: string): string {
   return `${hour12}:${String(m).padStart(2, "0")} ${period}`;
 }
 
+function toDateString(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function toTimeString(d: Date): string {
+  const h = String(d.getHours()).padStart(2, "0");
+  const min = String(d.getMinutes()).padStart(2, "0");
+  return `${h}:${min}`;
+}
+
 export default function AddExpenseScreen() {
   const router = useRouter();
   const db = useSQLiteContext();
@@ -70,8 +97,10 @@ export default function AddExpenseScreen() {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<
     PaymentMethod | ""
   >("");
-  const [date] = useState(getTodayString());
-  const [time] = useState(getNowTimeString());
+  const [date, setDate] = useState(getTodayString());
+  const [time, setTime] = useState(getNowTimeString());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
   const [note, setNote] = useState("");
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -108,6 +137,24 @@ export default function AddExpenseScreen() {
       delete next[field];
       return next;
     });
+  }
+
+  function onDateChange(event: DateTimePickerEvent, selectedDate?: Date) {
+    if (Platform.OS === "android") {
+      setShowDatePicker(false);
+    }
+    if (event.type === "set" && selectedDate) {
+      setDate(toDateString(selectedDate));
+    }
+  }
+
+  function onTimeChange(event: DateTimePickerEvent, selectedTime?: Date) {
+    if (Platform.OS === "android") {
+      setShowTimePicker(false);
+    }
+    if (event.type === "set" && selectedTime) {
+      setTime(toTimeString(selectedTime));
+    }
   }
 
   function validate(): boolean {
@@ -296,35 +343,76 @@ export default function AddExpenseScreen() {
           <View style={styles.row}>
             <View style={styles.half}>
               <Text style={styles.label}>Date</Text>
-              <Card style={styles.dateCard}>
-                <View style={styles.dateRow}>
-                  <Ionicons
-                    name="calendar-outline"
-                    size={18}
-                    color={Colors.primary}
-                  />
-                  <Text style={styles.dateValue}>
-                    {formatDisplayDate(date)}
-                  </Text>
-                </View>
-              </Card>
+              <Pressable onPress={() => setShowDatePicker(true)}>
+                <Card style={styles.dateCard}>
+                  <View style={styles.dateRow}>
+                    <Ionicons
+                      name="calendar-outline"
+                      size={18}
+                      color={Colors.primary}
+                    />
+                    <Text style={styles.dateValue}>
+                      {formatDisplayDate(date)}
+                    </Text>
+                  </View>
+                </Card>
+              </Pressable>
             </View>
             <View style={styles.half}>
               <Text style={styles.label}>Time</Text>
-              <Card style={styles.dateCard}>
-                <View style={styles.dateRow}>
-                  <Ionicons
-                    name="time-outline"
-                    size={18}
-                    color={Colors.primary}
-                  />
-                  <Text style={styles.dateValue}>
-                    {formatDisplayTime(time)}
-                  </Text>
-                </View>
-              </Card>
+              <Pressable onPress={() => setShowTimePicker(true)}>
+                <Card style={styles.dateCard}>
+                  <View style={styles.dateRow}>
+                    <Ionicons
+                      name="time-outline"
+                      size={18}
+                      color={Colors.primary}
+                    />
+                    <Text style={styles.dateValue}>
+                      {formatDisplayTime(time)}
+                    </Text>
+                  </View>
+                </Card>
+              </Pressable>
             </View>
           </View>
+
+          {showDatePicker && (
+            <DateTimePicker
+              value={dateStringToDate(date)}
+              mode="date"
+              display={Platform.OS === "ios" ? "spinner" : "default"}
+              onChange={onDateChange}
+              maximumDate={new Date()}
+            />
+          )}
+
+          {showTimePicker && (
+            <DateTimePicker
+              value={timeStringToDate(time)}
+              mode="time"
+              display={Platform.OS === "ios" ? "spinner" : "default"}
+              onChange={onTimeChange}
+            />
+          )}
+
+          {Platform.OS === "ios" && showDatePicker && (
+            <Pressable
+              onPress={() => setShowDatePicker(false)}
+              style={styles.pickerDone}
+            >
+              <Text style={styles.pickerDoneText}>Done</Text>
+            </Pressable>
+          )}
+
+          {Platform.OS === "ios" && showTimePicker && (
+            <Pressable
+              onPress={() => setShowTimePicker(false)}
+              style={styles.pickerDone}
+            >
+              <Text style={styles.pickerDoneText}>Done</Text>
+            </Pressable>
+          )}
 
           <View>
             <Input
@@ -457,5 +545,14 @@ const styles = StyleSheet.create({
   },
   footer: {
     paddingVertical: Spacing.base,
+  },
+  pickerDone: {
+    alignSelf: "flex-end",
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.base,
+  },
+  pickerDoneText: {
+    ...Typography.bodyMedium,
+    color: Colors.primary,
   },
 });
