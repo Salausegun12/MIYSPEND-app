@@ -166,3 +166,14 @@ export async function getTotalExpenses(
   const result = await db.getFirstAsync<{ total: number }>(query, ...params);
   return result?.total ?? 0;
 }
+
+export async function getTodayExpenseCount(
+  db: SQLiteDatabase,
+  today: string
+): Promise<number> {
+  const result = await db.getFirstAsync<{ count: number }>(
+    "SELECT COUNT(*) as count FROM expenses WHERE date LIKE ?",
+    `${today}%`
+  );
+  return result?.count ?? 0;
+}
