@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -9,10 +9,10 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSQLiteContext } from "expo-sqlite";
-import { Screen } from "../components/ui";
 import { Input } from "../components/ui/Input";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
@@ -64,12 +64,17 @@ export default function AddExpenseScreen() {
 
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod | "">("");
-  const [date, setDate] = useState(getTodayString());
-  const [time, setTime] = useState(getNowTimeString());
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(
+    null
+  );
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<
+    PaymentMethod | ""
+  >("");
+  const [date] = useState(getTodayString());
+  const [time] = useState(getNowTimeString());
   const [note, setNote] = useState("");
   const [loading, setLoading] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
 
   const [errors, setErrors] = useState<{
     amount?: string;
@@ -78,56 +83,62 @@ export default function AddExpenseScreen() {
     paymentMethod?: string;
   }>({});
 
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [categoriesLoaded, setCategoriesLoaded] = useState(false);
-
-  const loadCategories = useCallback(async () => {
-    if (categoriesLoaded) return;
-    try {
-      const cats = await getAllCategories(db);
-      setCategories(cats);
-      setCategoriesLoaded(true);
-    } catch {
-      setCategoriesLoaded(true);
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const cats = await getAllCategories(db);
+        if (!cancelled) {
+          setCategories(cats);
+        }
+      } catch (e) {
+        console.warn("Failed to load categories:", e);
+      }
     }
-  }, [db, categoriesLoaded]);
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [db]);
 
-  React.useEffect(() => {
-    loadCategories();
-  }, [loadCategories]);
+  function clearError(field: keyof typeof errors) {
+    setErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  }
 
-  const validate = (): boolean => {
-    const newErrors: typeof errors = {};
+  function validate(): boolean {
+    const next: typeof errors = {};
 
-    const parsedAmount = parseNairaInput(amount);
-    if (!amount.trim() || isNaN(parsedAmount) || parsedAmount <= 0) {
-      newErrors.amount = "Please enter a valid amount greater than zero";
+    const parsed = parseNairaInput(amount);
+    if (!amount.trim() || isNaN(parsed) || parsed <= 0) {
+      next.amount = "Enter a valid amount";
     }
-
     if (!description.trim()) {
-      newErrors.description = "Please enter what you bought";
+      next.description = "Enter what you bought";
     }
-
     if (!selectedCategory) {
-      newErrors.category = "Please select a category";
+      next.category = "Select a category";
     }
-
     if (!selectedPaymentMethod) {
-      newErrors.paymentMethod = "Please select a payment method";
+      next.paymentMethod = "Select a payment method";
     }
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+    setErrors(next);
+    return Object.keys(next).length === 0;
+  }
 
-  const handleSave = async () => {
+  async function handleSave() {
     if (!validate()) return;
     if (loading) return;
 
     setLoading(true);
     try {
-      const parsedAmount = parseNairaInput(amount);
-      const amountKobo = nairaToKobo(parsedAmount);
+      const parsed = parseNairaInput(amount);
+      const amountKobo = nairaToKobo(parsed);
       const dateTime = `${date} ${time}:00`;
 
       await addExpense(db, {
@@ -142,19 +153,20 @@ export default function AddExpenseScreen() {
       Alert.alert("Success", "Expense saved successfully", [
         { text: "OK", onPress: () => router.back() },
       ]);
-    } catch {
+    } catch (e) {
+      console.warn("Save failed:", e);
       Alert.alert("Error", "Failed to save expense. Please try again.");
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
-      <Screen scrollable={false}>
+    <SafeAreaView style={styles.safe} edges={["top"]}>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
         <View style={styles.header}>
           <Pressable
             onPress={() => router.back()}
@@ -167,68 +179,75 @@ export default function AddExpenseScreen() {
         </View>
 
         <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.scrollContent}
+          style={styles.flex}
+          contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.amountSection}>
-            <Text style={styles.amountLabel}>Amount</Text>
-            <View style={styles.amountInputRow}>
-              <Text style={styles.currencySymbol}>₦</Text>
-              <Input
-                placeholder="0.00"
-                keyboardType="decimal-pad"
-                value={amount}
-                onChangeText={(text) => {
-                  setAmount(text);
-                  if (errors.amount) setErrors((prev) => ({ ...prev, amount: undefined }));
-                }}
-                error={errors.amount}
-                style={styles.amountInput}
-              />
+          <View>
+            <Text style={styles.label}>Amount</Text>
+            <View style={styles.amountRow}>
+              <Text style={styles.nairaSign}>₦</Text>
+              <View style={styles.amountField}>
+                <Input
+                  placeholder="0.00"
+                  keyboardType="decimal-pad"
+                  value={amount}
+                  onChangeText={(t) => {
+                    setAmount(t);
+                    clearError("amount");
+                  }}
+                  error={errors.amount}
+                />
+              </View>
             </View>
           </View>
 
-          <Input
-            label="What did you buy?"
-            placeholder="e.g. Lunch at work"
-            value={description}
-            onChangeText={(text) => {
-              setDescription(text);
-              if (errors.description) setErrors((prev) => ({ ...prev, description: undefined }));
-            }}
-            error={errors.description}
-          />
+          <View>
+            <Input
+              label="What did you buy?"
+              placeholder="e.g. Lunch at work"
+              value={description}
+              onChangeText={(t) => {
+                setDescription(t);
+                clearError("description");
+              }}
+              error={errors.description}
+            />
+          </View>
 
-          <View style={styles.fieldSection}>
-            <Text style={styles.fieldLabel}>Category</Text>
-            {errors.category && <Text style={styles.errorText}>{errors.category}</Text>}
+          <View>
+            <Text style={styles.label}>Category</Text>
+            {errors.category ? (
+              <Text style={styles.error}>{errors.category}</Text>
+            ) : null}
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.chipContainer}
+              contentContainerStyle={styles.chips}
             >
               {categories.map((cat) => {
-                const isSelected = selectedCategory?.id === cat.id;
+                const active = selectedCategory?.id === cat.id;
                 return (
                   <Pressable
                     key={cat.id}
                     onPress={() => {
                       setSelectedCategory(cat);
-                      if (errors.category) setErrors((prev) => ({ ...prev, category: undefined }));
+                      clearError("category");
                     }}
                     style={[
                       styles.chip,
-                      isSelected && styles.chipSelected,
-                      isSelected && { borderColor: cat.color, backgroundColor: cat.color + "15" },
+                      active && {
+                        borderColor: cat.color,
+                        backgroundColor: cat.color + "15",
+                      },
                     ]}
                   >
                     <Text style={styles.chipIcon}>{cat.icon}</Text>
                     <Text
                       style={[
-                        styles.chipText,
-                        isSelected && { color: cat.color, fontWeight: "600" },
+                        styles.chipLabel,
+                        active && { color: cat.color, fontWeight: "600" },
                       ]}
                     >
                       {cat.name}
@@ -239,35 +258,34 @@ export default function AddExpenseScreen() {
             </ScrollView>
           </View>
 
-          <View style={styles.fieldSection}>
-            <Text style={styles.fieldLabel}>Payment Method</Text>
-            {errors.paymentMethod && (
-              <Text style={styles.errorText}>{errors.paymentMethod}</Text>
-            )}
+          <View>
+            <Text style={styles.label}>Payment Method</Text>
+            {errors.paymentMethod ? (
+              <Text style={styles.error}>{errors.paymentMethod}</Text>
+            ) : null}
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.chipContainer}
+              contentContainerStyle={styles.chips}
             >
-              {PAYMENT_METHODS.map((method) => {
-                const isSelected = selectedPaymentMethod === method;
+              {PAYMENT_METHODS.map((m) => {
+                const active = selectedPaymentMethod === m;
                 return (
                   <Pressable
-                    key={method}
+                    key={m}
                     onPress={() => {
-                      setSelectedPaymentMethod(method);
-                      if (errors.paymentMethod)
-                        setErrors((prev) => ({ ...prev, paymentMethod: undefined }));
+                      setSelectedPaymentMethod(m);
+                      clearError("paymentMethod");
                     }}
-                    style={[styles.chip, isSelected && styles.chipSelected]}
+                    style={[styles.chip, active && styles.chipActive]}
                   >
                     <Text
                       style={[
-                        styles.chipText,
-                        isSelected && styles.chipTextSelected,
+                        styles.chipLabel,
+                        active && styles.chipLabelActive,
                       ]}
                     >
-                      {method}
+                      {m}
                     </Text>
                   </Pressable>
                 );
@@ -276,66 +294,69 @@ export default function AddExpenseScreen() {
           </View>
 
           <View style={styles.row}>
-            <View style={styles.halfField}>
-              <Text style={styles.fieldLabel}>Date</Text>
+            <View style={styles.half}>
+              <Text style={styles.label}>Date</Text>
               <Card style={styles.dateCard}>
-                <Pressable
-                  onPress={() => {
-                    Alert.alert("Change Date", "Date picker will be available in a future update.", [
-                      { text: "OK" },
-                    ]);
-                  }}
-                  style={styles.datePressable}
-                >
-                  <Ionicons name="calendar-outline" size={18} color={Colors.primary} />
-                  <Text style={styles.dateText}>{formatDisplayDate(date)}</Text>
-                </Pressable>
+                <View style={styles.dateRow}>
+                  <Ionicons
+                    name="calendar-outline"
+                    size={18}
+                    color={Colors.primary}
+                  />
+                  <Text style={styles.dateValue}>
+                    {formatDisplayDate(date)}
+                  </Text>
+                </View>
               </Card>
             </View>
-
-            <View style={styles.halfField}>
-              <Text style={styles.fieldLabel}>Time</Text>
+            <View style={styles.half}>
+              <Text style={styles.label}>Time</Text>
               <Card style={styles.dateCard}>
-                <Pressable
-                  onPress={() => {
-                    Alert.alert("Change Time", "Time picker will be available in a future update.", [
-                      { text: "OK" },
-                    ]);
-                  }}
-                  style={styles.datePressable}
-                >
-                  <Ionicons name="time-outline" size={18} color={Colors.primary} />
-                  <Text style={styles.dateText}>{formatDisplayTime(time)}</Text>
-                </Pressable>
+                <View style={styles.dateRow}>
+                  <Ionicons
+                    name="time-outline"
+                    size={18}
+                    color={Colors.primary}
+                  />
+                  <Text style={styles.dateValue}>
+                    {formatDisplayTime(time)}
+                  </Text>
+                </View>
               </Card>
             </View>
           </View>
 
-          <Input
-            label="Note (optional)"
-            placeholder="Any additional details..."
-            value={note}
-            onChangeText={setNote}
-            multiline
-            numberOfLines={3}
-            style={styles.noteInput}
-          />
-        </ScrollView>
+          <View>
+            <Input
+              label="Note (optional)"
+              placeholder="Any additional details..."
+              value={note}
+              onChangeText={setNote}
+              multiline
+              numberOfLines={3}
+              style={styles.noteInput}
+            />
+          </View>
 
-        <View style={styles.footer}>
-          <Button
-            title="Save Expense"
-            onPress={handleSave}
-            loading={loading}
-            disabled={loading}
-          />
-        </View>
-      </Screen>
-    </KeyboardAvoidingView>
+          <View style={styles.footer}>
+            <Button
+              title="Save Expense"
+              onPress={handleSave}
+              loading={loading}
+              disabled={loading}
+            />
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safe: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
   flex: {
     flex: 1,
   },
@@ -353,45 +374,32 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     marginLeft: Spacing.md,
   },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
+  content: {
     paddingHorizontal: Spacing.base,
     paddingBottom: Spacing.xl,
     gap: Spacing.base,
   },
-  amountSection: {
-    gap: Spacing.xs,
-  },
-  amountLabel: {
+  label: {
     ...Typography.label,
     color: Colors.textPrimary,
   },
-  amountInputRow: {
+  error: {
+    ...Typography.caption,
+    color: Colors.error,
+  },
+  amountRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: Spacing.sm,
   },
-  currencySymbol: {
+  nairaSign: {
     ...Typography.amount,
     color: Colors.primary,
   },
-  amountInput: {
+  amountField: {
     flex: 1,
   },
-  fieldSection: {
-    gap: Spacing.xs,
-  },
-  fieldLabel: {
-    ...Typography.label,
-    color: Colors.textPrimary,
-  },
-  errorText: {
-    ...Typography.caption,
-    color: Colors.error,
-  },
-  chipContainer: {
+  chips: {
     gap: Spacing.sm,
     paddingVertical: Spacing.xs,
   },
@@ -406,17 +414,19 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     gap: Spacing.xs,
   },
-  chipSelected: {
+  chipActive: {
     borderWidth: 1.5,
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primarySoft,
   },
   chipIcon: {
     fontSize: 16,
   },
-  chipText: {
+  chipLabel: {
     ...Typography.bodySmall,
     color: Colors.textSecondary,
   },
-  chipTextSelected: {
+  chipLabelActive: {
     color: Colors.primary,
     fontWeight: "600",
   },
@@ -424,19 +434,19 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: Spacing.base,
   },
-  halfField: {
+  half: {
     flex: 1,
     gap: Spacing.xs,
   },
   dateCard: {
     padding: Spacing.sm,
   },
-  datePressable: {
+  dateRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: Spacing.sm,
   },
-  dateText: {
+  dateValue: {
     ...Typography.bodySmall,
     color: Colors.textPrimary,
   },
@@ -446,8 +456,6 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.md,
   },
   footer: {
-    paddingHorizontal: Spacing.base,
-    paddingBottom: Spacing.xl,
-    paddingTop: Spacing.sm,
+    paddingVertical: Spacing.base,
   },
 });
