@@ -124,7 +124,12 @@ export default function HomeScreen() {
                 {recentExpenses.map((expense, index) => (
                   <React.Fragment key={expense.id}>
                     {index > 0 && <View style={styles.divider} />}
-                    <View style={styles.expenseRow}>
+                    <Pressable
+                      onPress={() =>
+                        router.push(`/expense-detail?id=${expense.id}` as Href)
+                      }
+                      style={styles.expenseRow}
+                    >
                       <IconContainer
                         size={40}
                         backgroundColor={expense.category_color + "20"}
@@ -144,7 +149,7 @@ export default function HomeScreen() {
                       <Text style={styles.expenseAmount}>
                         {formatKoboAmount(expense.amount)}
                       </Text>
-                    </View>
+                    </Pressable>
                   </React.Fragment>
                 ))}
               </Card>

@@ -21,6 +21,12 @@ export default function RootLayout() {
             presentation: "modal",
           }}
         />
+        <Stack.Screen
+          name="expense-detail"
+          options={{
+            presentation: "modal",
+          }}
+        />
       </Stack>
     </DatabaseProvider>
   );
