@@ -25,6 +25,7 @@ import {
 } from "../../database/expenses";
 import { getTodayString, getWeekStart, getWeekEnd, getGreeting } from "../../utils/date";
 import { formatKoboAmount } from "../../utils/money";
+import { getUserName } from "../../utils/user";
 import type { ExpenseWithCategory } from "../../types/database";
 
 export default function HomeScreen() {
@@ -38,6 +39,7 @@ export default function HomeScreen() {
   const [recentExpenses, setRecentExpenses] = useState<ExpenseWithCategory[]>(
     []
   );
+  const [userName, setUserName] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -45,17 +47,19 @@ export default function HomeScreen() {
       const weekStart = getWeekStart();
       const weekEnd = getWeekEnd();
 
-      const [todayTot, weekTot, count, recent] = await Promise.all([
+      const [todayTot, weekTot, count, recent, name] = await Promise.all([
         getTotalExpenses(db, today, today),
         getTotalExpenses(db, weekStart, weekEnd),
         getTodayExpenseCount(db, today),
         getAllExpenses(db, 5),
+        getUserName(db),
       ]);
 
       setTodayTotal(todayTot);
       setWeekTotal(weekTot);
       setTodayCount(count);
       setRecentExpenses(recent);
+      setUserName(name);
     } catch (e) {
       console.warn("Failed to load dashboard data:", e);
     } finally {
@@ -90,7 +94,9 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Text style={styles.greeting}>{getGreeting()} 👋</Text>
+          <Text style={styles.greeting}>
+            {getGreeting()}{userName ? `, ${userName}` : ""} 👋
+          </Text>
           <Text style={styles.brand}>Miyspend</Text>
         </View>
 

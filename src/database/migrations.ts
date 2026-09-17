@@ -1,6 +1,6 @@
 import { SQLiteDatabase } from "expo-sqlite";
 
-const CURRENT_DB_VERSION = 2;
+const CURRENT_DB_VERSION = 3;
 
 const MIGRATIONS: Record<number, (db: SQLiteDatabase) => Promise<void>> = {
   1: async (db) => {
@@ -85,6 +85,11 @@ const MIGRATIONS: Record<number, (db: SQLiteDatabase) => Promise<void>> = {
         cat.sort_order
       );
     }
+  },
+  3: async (db) => {
+    // User profile stored in settings table (user_name, user_phone, user_email, onboarding_complete)
+    // No schema changes needed - settings table already supports key-value pairs.
+    // This migration ensures the DB version is bumped.
   },
 };
 
