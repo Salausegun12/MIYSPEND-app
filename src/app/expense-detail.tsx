@@ -7,11 +7,13 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSQLiteContext } from "expo-sqlite";
+import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { Input } from "../components/ui/Input";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
@@ -30,6 +32,57 @@ import { nairaToKobo, koboToNaira, parseNairaInput, formatKoboAmount } from "../
 import type { ExpenseWithCategory, Category, PaymentMethod } from "../types/database";
 import { PAYMENT_METHODS } from "../types/database";
 
+function extractDatePart(datetimeStr: string): string {
+  return datetimeStr.substring(0, 10);
+}
+
+function extractTimePart(datetimeStr: string): string {
+  const parts = datetimeStr.split(" ");
+  if (parts.length < 2) return "00:00";
+  return parts[1].substring(0, 5);
+}
+
+function dateStringToDate(dateStr: string): Date {
+  return new Date(dateStr + "T00:00:00");
+}
+
+function timeStringToDate(timeStr: string): Date {
+  const [h, m] = timeStr.split(":").map(Number);
+  const d = new Date();
+  d.setHours(h, m, 0, 0);
+  return d;
+}
+
+function formatDisplayDate(dateStr: string): string {
+  const d = dateStringToDate(dateStr);
+  return d.toLocaleDateString("en-NG", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function formatDisplayTime(timeStr: string): string {
+  const [h, m] = timeStr.split(":").map(Number);
+  const period = h >= 12 ? "PM" : "AM";
+  const hour12 = h % 12 || 12;
+  return `${hour12}:${String(m).padStart(2, "0")} ${period}`;
+}
+
+function toDateString(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function toTimeString(d: Date): string {
+  const h = String(d.getHours()).padStart(2, "0");
+  const min = String(d.getMinutes()).padStart(2, "0");
+  return `${h}:${min}`;
+}
+
 export default function ExpenseDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -45,6 +98,10 @@ export default function ExpenseDetailScreen() {
   const [description, setDescription] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod | "">("");
+  const [editDate, setEditDate] = useState("");
+  const [editTime, setEditTime] = useState("");
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
   const [note, setNote] = useState("");
 
   const [errors, setErrors] = useState<{
@@ -64,6 +121,8 @@ export default function ExpenseDetailScreen() {
         setDescription(exp.description);
         setSelectedPaymentMethod(exp.payment_method as PaymentMethod);
         setNote(exp.note);
+        setEditDate(extractDatePart(exp.date));
+        setEditTime(extractTimePart(exp.date));
       }
       const cats = await getAllCategories(db);
       setCategories(cats);
@@ -118,6 +177,7 @@ export default function ExpenseDetailScreen() {
     try {
       const parsed = parseNairaInput(amount);
       const amountKobo = nairaToKobo(parsed);
+      const dateTime = `${editDate} ${editTime}:00`;
 
       await updateExpense(db, expense.id, {
         amount: amountKobo,
@@ -125,6 +185,7 @@ export default function ExpenseDetailScreen() {
         description: description.trim(),
         payment_method: selectedPaymentMethod as string,
         note: note.trim(),
+        date: dateTime,
       });
 
       setEditing(false);
@@ -160,6 +221,24 @@ export default function ExpenseDetailScreen() {
         },
       ]
     );
+  }
+
+  function onDateChange(event: DateTimePickerEvent, selectedDate?: Date) {
+    if (Platform.OS === "android") {
+      setShowDatePicker(false);
+    }
+    if (event.type === "set" && selectedDate) {
+      setEditDate(toDateString(selectedDate));
+    }
+  }
+
+  function onTimeChange(event: DateTimePickerEvent, selectedTime?: Date) {
+    if (Platform.OS === "android") {
+      setShowTimePicker(false);
+    }
+    if (event.type === "set" && selectedTime) {
+      setEditTime(toTimeString(selectedTime));
+    }
   }
 
   if (loading) {
@@ -370,6 +449,62 @@ export default function ExpenseDetailScreen() {
               </ScrollView>
             </View>
 
+            <View style={styles.row}>
+              <View style={styles.half}>
+                <Text style={styles.label}>Date</Text>
+                <Pressable onPress={() => setShowDatePicker(true)}>
+                  <Card style={styles.dateCard}>
+                    <View style={styles.dateRow}>
+                      <Ionicons name="calendar-outline" size={18} color={Colors.primary} />
+                      <Text style={styles.dateValue}>{formatDisplayDate(editDate)}</Text>
+                    </View>
+                  </Card>
+                </Pressable>
+              </View>
+              <View style={styles.half}>
+                <Text style={styles.label}>Time</Text>
+                <Pressable onPress={() => setShowTimePicker(true)}>
+                  <Card style={styles.dateCard}>
+                    <View style={styles.dateRow}>
+                      <Ionicons name="time-outline" size={18} color={Colors.primary} />
+                      <Text style={styles.dateValue}>{formatDisplayTime(editTime)}</Text>
+                    </View>
+                  </Card>
+                </Pressable>
+              </View>
+            </View>
+
+            {showDatePicker && (
+              <DateTimePicker
+                value={dateStringToDate(editDate)}
+                mode="date"
+                display={Platform.OS === "ios" ? "spinner" : "default"}
+                onChange={onDateChange}
+                maximumDate={new Date()}
+              />
+            )}
+
+            {showTimePicker && (
+              <DateTimePicker
+                value={timeStringToDate(editTime)}
+                mode="time"
+                display={Platform.OS === "ios" ? "spinner" : "default"}
+                onChange={onTimeChange}
+              />
+            )}
+
+            {Platform.OS === "ios" && showDatePicker && (
+              <Pressable onPress={() => setShowDatePicker(false)} style={styles.pickerDone}>
+                <Text style={styles.pickerDoneText}>Done</Text>
+              </Pressable>
+            )}
+
+            {Platform.OS === "ios" && showTimePicker && (
+              <Pressable onPress={() => setShowTimePicker(false)} style={styles.pickerDone}>
+                <Text style={styles.pickerDoneText}>Done</Text>
+              </Pressable>
+            )}
+
             <View>
               <Input
                 label="Note (optional)"
@@ -392,6 +527,8 @@ export default function ExpenseDetailScreen() {
                   setDescription(expense.description);
                   setSelectedPaymentMethod(expense.payment_method as PaymentMethod);
                   setNote(expense.note);
+                  setEditDate(extractDatePart(expense.date));
+                  setEditTime(extractTimePart(expense.date));
                   const cat = categories.find((c) => c.id === expense.category_id);
                   if (cat) setSelectedCategory(cat);
                   setErrors({});
@@ -550,6 +687,35 @@ const styles = StyleSheet.create({
     height: 80,
     textAlignVertical: "top",
     paddingTop: Spacing.md,
+  },
+  row: {
+    flexDirection: "row",
+    gap: Spacing.base,
+  },
+  half: {
+    flex: 1,
+    gap: Spacing.xs,
+  },
+  dateCard: {
+    padding: Spacing.sm,
+  },
+  dateRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+  },
+  dateValue: {
+    ...Typography.bodySmall,
+    color: Colors.textPrimary,
+  },
+  pickerDone: {
+    alignSelf: "flex-end",
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.base,
+  },
+  pickerDoneText: {
+    ...Typography.bodyMedium,
+    color: Colors.primary,
   },
   actions: {
     flexDirection: "row",
