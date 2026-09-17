@@ -159,6 +159,101 @@ export function formatHistoryDate(dateStr: string): string {
 }
 
 /**
+ * Get Monday of the week containing the given YYYY-MM-DD string.
+ */
+export function getWeekStartForDate(dateStr: string): string {
+  const d = new Date(dateStr + "T00:00:00");
+  const day = d.getDay();
+  const diff = day === 0 ? 6 : day - 1;
+  const monday = new Date(d);
+  monday.setDate(d.getDate() - diff);
+  const y = monday.getFullYear();
+  const m = String(monday.getMonth() + 1).padStart(2, "0");
+  const dayStr = String(monday.getDate()).padStart(2, "0");
+  return `${y}-${m}-${dayStr}`;
+}
+
+/**
+ * Get Sunday of the week containing the given YYYY-MM-DD string.
+ */
+export function getWeekEndForDate(dateStr: string): string {
+  const d = new Date(dateStr + "T00:00:00");
+  const day = d.getDay();
+  const diff = day === 0 ? 0 : 6 - day;
+  const sunday = new Date(d);
+  sunday.setDate(d.getDate() + diff);
+  const y = sunday.getFullYear();
+  const m = String(sunday.getMonth() + 1).padStart(2, "0");
+  const dayStr = String(sunday.getDate()).padStart(2, "0");
+  return `${y}-${m}-${dayStr}`;
+}
+
+/**
+ * Shift a YYYY-MM-DD date by N weeks.
+ */
+export function shiftWeek(dateStr: string, weeks: number): string {
+  const d = new Date(dateStr + "T00:00:00");
+  d.setDate(d.getDate() + weeks * 7);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const dayStr = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${dayStr}`;
+}
+
+/**
+ * Format a week range for display.
+ * "2026-09-15", "2026-09-21" -> "15 Sep - 21 Sep 2026"
+ */
+export function formatWeekRange(monday: string, sunday: string): string {
+  const m = new Date(monday + "T00:00:00");
+  const s = new Date(sunday + "T00:00:00");
+  const mDay = m.getDate();
+  const sDay = s.getDate();
+  const mMonth = m.toLocaleDateString("en-NG", { month: "short" });
+  const sMonth = s.toLocaleDateString("en-NG", { month: "short" });
+  const sYear = s.getFullYear();
+  if (mMonth === sMonth) {
+    return `${mDay} ${mMonth} - ${sDay} ${sMonth} ${sYear}`;
+  }
+  return `${mDay} ${mMonth} - ${sDay} ${sMonth} ${sYear}`;
+}
+
+/**
+ * Get short day name from a YYYY-MM-DD date string.
+ * "2026-09-15" -> "Mon"
+ */
+export function getDayOfWeek(dateStr: string): string {
+  const d = new Date(dateStr + "T00:00:00");
+  return d.toLocaleDateString("en-NG", { weekday: "short" });
+}
+
+/**
+ * Format a short date for daily labels.
+ * "2026-09-15" -> "15 Sep"
+ */
+export function formatShortDate(dateStr: string): string {
+  const d = new Date(dateStr + "T00:00:00");
+  return d.toLocaleDateString("en-NG", { day: "numeric", month: "short" });
+}
+
+/**
+ * Get all 7 date strings (Mon-Sun) for a week starting at the given Monday.
+ */
+export function getWeekDays(mondayDateStr: string): string[] {
+  const days: string[] = [];
+  const d = new Date(mondayDateStr + "T00:00:00");
+  for (let i = 0; i < 7; i++) {
+    const day = new Date(d);
+    day.setDate(d.getDate() + i);
+    const y = day.getFullYear();
+    const m = String(day.getMonth() + 1).padStart(2, "0");
+    const dayStr = String(day.getDate()).padStart(2, "0");
+    days.push(`${y}-${m}-${dayStr}`);
+  }
+  return days;
+}
+
+/**
  * Get a greeting based on the current hour.
  */
 export function getGreeting(): string {
