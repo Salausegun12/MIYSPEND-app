@@ -298,6 +298,7 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   filterChip: {
+    alignSelf: "flex-start",
     paddingHorizontal: Spacing.base,
     paddingVertical: Spacing.sm,
     borderRadius: Radius.md,
