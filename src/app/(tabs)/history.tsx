@@ -60,16 +60,20 @@ interface DateGroup {
 
 function getFilterDateRange(filter: FilterKey): { start: string; end: string } | null {
   switch (filter) {
-    case "today":
-      return { start: getTodayString(), end: getTodayString() };
-    case "yesterday":
-      return { start: getYesterdayString(), end: getYesterdayString() };
+    case "today": {
+      const d = getTodayString();
+      return { start: `${d} 00:00:00`, end: `${d} 23:59:59` };
+    }
+    case "yesterday": {
+      const d = getYesterdayString();
+      return { start: `${d} 00:00:00`, end: `${d} 23:59:59` };
+    }
     case "thisWeek":
-      return { start: getWeekStart(), end: getWeekEnd() };
+      return { start: `${getWeekStart()} 00:00:00`, end: `${getWeekEnd()} 23:59:59` };
     case "lastWeek":
-      return { start: getLastWeekStart(), end: getLastWeekEnd() };
+      return { start: `${getLastWeekStart()} 00:00:00`, end: `${getLastWeekEnd()} 23:59:59` };
     case "thisMonth":
-      return { start: getMonthStart(), end: getMonthEnd() };
+      return { start: `${getMonthStart()} 00:00:00`, end: `${getMonthEnd()} 23:59:59` };
     default:
       return null;
   }
