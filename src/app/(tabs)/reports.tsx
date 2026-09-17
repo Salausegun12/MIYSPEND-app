@@ -29,8 +29,11 @@ import {
   formatShortDate,
   getWeekDays,
 } from "../../utils/date";
-import { formatKoboAmount, koboToNaira } from "../../utils/money";
-import { getExpensesByDateRange, getTotalExpenses } from "../../database/expenses";
+import { formatKoboAmount } from "../../utils/money";
+import {
+  getExpensesByDateRange,
+  getTotalExpenses,
+} from "../../database/expenses";
 import type { ExpenseWithCategory } from "../../types/database";
 
 interface CategorySpending {
@@ -53,88 +56,8 @@ export default function ReportsScreen() {
 
   const [loading, setLoading] = useState(true);
   const [selectedMonday, setSelectedMonday] = useState(() => {
-    const today = getTodayString();
-    return getWeekStartForDate(today);
+    return getWeekStartForDate(getTodayString());
   });
-
-  const weekMonday = selectedMonday;
-  const weekSunday = getWeekEndForDate(weekMonday);
-  const weekDays = getWeekDays(weekMonday);
-  const prevMonday = shiftWeek(weekMonday, -1);
-  const prevSunday = getWeekEndForDate(prevMonday);
-
-  const loadData = useCallback(async () => {
-    try {
-      const start = `${weekMonday} 00:00:00`;
-      const end = `${weekSunday} 23:59:59`;
-      const prevStart = `${prevMonday} 00:00:00`;
-      const prevEnd = `${prevSunday} 23:59:59`;
-
-      const [weekExpenses, weekTotal, prevTotal] = await Promise.all([
-        getExpensesByDateRange(db, start, end),
-        getTotalExpenses(db, start, end),
-        getTotalExpenses(db, prevStart, prevEnd),
-      ]);
-
-      const dailySpending: DailySpending[] = weekDays.map((dayDate) => {
-        const dayKey = dayDate.substring(0, 10);
-        const dayTotal = weekExpenses
-          .filter((e) => e.date.startsWith(dayKey))
-          .reduce((sum, e) => sum + e.amount, 0);
-        return {
-          date: dayDate,
-          dayName: getDayOfWeek(dayDate),
-          shortDate: formatShortDate(dayDate),
-          total: dayTotal,
-        };
-      });
-
-      const categoryMap = new Map<number, CategorySpending>();
-      for (const exp of weekExpenses) {
-        const existing = categoryMap.get(exp.category_id);
-        if (existing) {
-          existing.total += exp.amount;
-        } else {
-          categoryMap.set(exp.category_id, {
-            category_id: exp.category_id,
-            category_name: exp.category_name,
-            category_icon: exp.category_icon,
-            category_color: exp.category_color,
-            total: exp.amount,
-          });
-        }
-      }
-      const categorySpending = Array.from(categoryMap.values()).sort(
-        (a, b) => b.total - a.total
-      );
-
-      const highestDay = dailySpending.reduce(
-        (max, d) => (d.total > max.total ? d : max),
-        dailySpending[0]
-      );
-      const highestCategory = categorySpending[0] ?? null;
-      const averageDaily = Math.round(weekTotal / 7);
-
-      setWeekTotal(weekTotal);
-      setPrevWeekTotal(prevTotal);
-      setDailySpending(dailySpending);
-      setCategorySpending(categorySpending);
-      setHighestDay(highestDay);
-      setHighestCategory(highestCategory);
-      setAverageDaily(averageDaily);
-    } catch (e) {
-      console.warn("Failed to load report data:", e);
-    } finally {
-      setLoading(false);
-    }
-  }, [db, weekMonday, weekSunday, prevMonday, prevSunday, weekDays]);
-
-  useFocusEffect(
-    useCallback(() => {
-      setLoading(true);
-      loadData();
-    }, [loadData])
-  );
 
   const [weekTotal, setWeekTotal] = useState(0);
   const [prevWeekTotal, setPrevWeekTotal] = useState(0);
@@ -147,14 +70,99 @@ export default function ReportsScreen() {
     useState<CategorySpending | null>(null);
   const [averageDaily, setAverageDaily] = useState(0);
 
+  const weekSunday = useMemo(
+    () => getWeekEndForDate(selectedMonday),
+    [selectedMonday]
+  );
+  const prevMonday = useMemo(() => shiftWeek(selectedMonday, -1), [selectedMonday]);
+  const prevSunday = useMemo(() => getWeekEndForDate(prevMonday), [prevMonday]);
+
   const isCurrentWeek = useMemo(() => {
-    const today = getTodayString();
-    const currentMonday = getWeekStart();
-    return weekMonday === currentMonday;
-  }, [weekMonday]);
+    return selectedMonday === getWeekStart();
+  }, [selectedMonday]);
+
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+
+      async function load() {
+        try {
+          const weekDays = getWeekDays(selectedMonday);
+          const start = `${selectedMonday} 00:00:00`;
+          const end = `${weekSunday} 23:59:59`;
+          const prevStart = `${prevMonday} 00:00:00`;
+          const prevEnd = `${prevSunday} 23:59:59`;
+
+          const [weekExpenses, weekTot, prevTot] = await Promise.all([
+            getExpensesByDateRange(db, start, end),
+            getTotalExpenses(db, start, end),
+            getTotalExpenses(db, prevStart, prevEnd),
+          ]);
+
+          if (cancelled) return;
+
+          const daily: DailySpending[] = weekDays.map((dayDate) => {
+            const dayKey = dayDate.substring(0, 10);
+            const dayTotal = weekExpenses
+              .filter((e) => e.date.startsWith(dayKey))
+              .reduce((sum, e) => sum + e.amount, 0);
+            return {
+              date: dayDate,
+              dayName: getDayOfWeek(dayDate),
+              shortDate: formatShortDate(dayDate),
+              total: dayTotal,
+            };
+          });
+
+          const catMap = new Map<number, CategorySpending>();
+          for (const exp of weekExpenses) {
+            const existing = catMap.get(exp.category_id);
+            if (existing) {
+              existing.total += exp.amount;
+            } else {
+              catMap.set(exp.category_id, {
+                category_id: exp.category_id,
+                category_name: exp.category_name,
+                category_icon: exp.category_icon,
+                category_color: exp.category_color,
+                total: exp.amount,
+              });
+            }
+          }
+          const cats = Array.from(catMap.values()).sort(
+            (a, b) => b.total - a.total
+          );
+
+          const hDay = daily.reduce(
+            (max, d) => (d.total > max.total ? d : max),
+            daily[0]
+          );
+          const hCat = cats[0] ?? null;
+          const avg = Math.round(weekTot / 7);
+
+          setWeekTotal(weekTot);
+          setPrevWeekTotal(prevTot);
+          setDailySpending(daily);
+          setCategorySpending(cats);
+          setHighestDay(hDay);
+          setHighestCategory(hCat);
+          setAverageDaily(avg);
+        } catch (e) {
+          console.warn("Failed to load report data:", e);
+        } finally {
+          if (!cancelled) setLoading(false);
+        }
+      }
+
+      load();
+
+      return () => {
+        cancelled = true;
+      };
+    }, [db, selectedMonday, weekSunday, prevMonday, prevSunday])
+  );
 
   const weekDiff = weekTotal - prevWeekTotal;
-  const spendingIncreased = weekDiff > 0;
   const hasData = weekTotal > 0;
   const hasPrevData = prevWeekTotal > 0;
   const maxDaily = useMemo(
@@ -188,25 +196,21 @@ export default function ReportsScreen() {
       >
         <View style={styles.weekNav}>
           <Pressable
-            onPress={() => setSelectedMonday(shiftWeek(weekMonday, -1))}
+            onPress={() => setSelectedMonday(shiftWeek(selectedMonday, -1))}
             style={styles.navArrow}
           >
-            <Ionicons
-              name="chevron-back"
-              size={24}
-              color={Colors.primary}
-            />
+            <Ionicons name="chevron-back" size={24} color={Colors.primary} />
           </Pressable>
           <View style={styles.weekInfo}>
             <Text style={styles.weekLabel}>
               {isCurrentWeek ? "This Week" : "Week of"}
             </Text>
             <Text style={styles.weekRange}>
-              {formatWeekRange(weekMonday, weekSunday)}
+              {formatWeekRange(selectedMonday, weekSunday)}
             </Text>
           </View>
           <Pressable
-            onPress={() => setSelectedMonday(shiftWeek(weekMonday, 1))}
+            onPress={() => setSelectedMonday(shiftWeek(selectedMonday, 1))}
             style={styles.navArrow}
             disabled={isCurrentWeek}
           >
@@ -250,7 +254,7 @@ export default function ReportsScreen() {
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Daily Spending</Text>
               <Card style={styles.dailyCard}>
-                {dailySpending.map((day, index) => {
+                {dailySpending.map((day) => {
                   const barWidth =
                     maxDaily > 0 ? (day.total / maxDaily) * 100 : 0;
                   const isToday = day.date === getTodayString();
@@ -316,7 +320,9 @@ export default function ReportsScreen() {
                         </IconContainer>
                         <View style={styles.catInfo}>
                           <View style={styles.catHeader}>
-                            <Text style={styles.catName}>{cat.category_name}</Text>
+                            <Text style={styles.catName}>
+                              {cat.category_name}
+                            </Text>
                             <Text style={styles.catPct}>{pct}%</Text>
                           </View>
                           <View style={styles.catBarBg}>
@@ -371,7 +377,10 @@ export default function ReportsScreen() {
                   <>
                     <View style={styles.highlightDivider} />
                     <View style={styles.highlightRow}>
-                      <IconContainer size={36} backgroundColor={Colors.primarySoft}>
+                      <IconContainer
+                        size={36}
+                        backgroundColor={Colors.primarySoft}
+                      >
                         <Ionicons
                           name="trending-up"
                           size={18}
@@ -396,15 +405,15 @@ export default function ReportsScreen() {
             </View>
 
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Compare with Previous Week</Text>
+              <Text style={styles.sectionTitle}>
+                Compare with Previous Week
+              </Text>
               <Card style={styles.compareCard}>
                 <View style={styles.compareRow}>
                   <View style={styles.compareItem}>
                     <Text style={styles.compareLabel}>Previous Week</Text>
                     <Text style={styles.compareAmount}>
-                      {hasPrevData
-                        ? formatKoboAmount(prevWeekTotal)
-                        : "₦0"}
+                      {hasPrevData ? formatKoboAmount(prevWeekTotal) : "₦0"}
                     </Text>
                   </View>
                   <View style={styles.compareDivider} />
@@ -428,13 +437,17 @@ export default function ReportsScreen() {
                         No data for previous week
                       </Text>
                     ) : weekDiff > 0 ? (
-                      <Text style={styles.compareNote}>Spending increased</Text>
+                      <Text style={styles.compareNote}>
+                        Spending increased
+                      </Text>
                     ) : weekDiff < 0 ? (
                       <Text style={styles.compareNote}>
                         Spending decreased
                       </Text>
                     ) : (
-                      <Text style={styles.compareNote}>Same as last week</Text>
+                      <Text style={styles.compareNote}>
+                        Same as last week
+                      </Text>
                     )}
                   </View>
                 </View>
