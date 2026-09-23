@@ -1,8 +1,6 @@
 import React from "react";
 import { View, StyleSheet, ViewStyle } from "react-native";
 import { Colors } from "../../constants/colors";
-import { Radius } from "../../constants/radius";
-import { Spacing } from "../../constants/spacing";
 
 interface IconContainerProps {
   children: React.ReactNode;

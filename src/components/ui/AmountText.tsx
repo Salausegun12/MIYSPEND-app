@@ -30,6 +30,7 @@ export function AmountText({
       style={[
         small ? styles.amountSmall : styles.amount,
         { color: Colors.textPrimary },
+        style,
         textStyles,
       ]}
     >

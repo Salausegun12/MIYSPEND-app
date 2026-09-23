@@ -7,22 +7,24 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "scheme": "miyspend",
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#004D40"
-    },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.miyspend.app",
+      "buildNumber": "1"
     },
     "android": {
+      "package": "com.miyspend.app",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#004D40",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.POST_NOTIFICATIONS"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -37,6 +39,17 @@
         {
           "icon": "./assets/icon.png",
           "color": "#006B5B"
+        }
+      ],
+      "expo-font",
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#004D40"
         }
       ]
     ]

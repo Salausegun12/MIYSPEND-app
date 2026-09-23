@@ -15,7 +15,6 @@ import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { IconContainer } from "../../components/ui/IconContainer";
 import { Colors } from "../../constants/colors";
-import { Radius } from "../../constants/radius";
 import { Typography } from "../../constants/typography";
 import { Spacing } from "../../constants/spacing";
 import {
@@ -97,7 +96,7 @@ export default function HomeScreen() {
           <Text style={styles.greeting}>
             {getGreeting()}{userName ? `, ${userName}` : ""} 👋
           </Text>
-          <Text style={styles.brand}>Miyspend</Text>
+          <Text style={styles.brand}>MiySpend</Text>
         </View>
 
         {hasExpenses ? (

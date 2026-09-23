@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  Pressable,
   ScrollView,
   Alert,
   Platform,
@@ -16,7 +15,6 @@ import { useSQLiteContext } from "expo-sqlite";
 import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
 import { Colors } from "../../constants/colors";
-import { Radius } from "../../constants/radius";
 import { Typography } from "../../constants/typography";
 import { Spacing } from "../../constants/spacing";
 import { saveUserProfile } from "../../utils/user";
@@ -84,7 +82,8 @@ export default function OnboardingSignUpScreen() {
             </View>
             <Text style={styles.title}>Create Your Profile</Text>
             <Text style={styles.desc}>
-              Set up your account to get started with MiySpend.
+              Tell us a bit about yourself so we can personalize your
+              experience. This stays on your device.
             </Text>
           </View>
 

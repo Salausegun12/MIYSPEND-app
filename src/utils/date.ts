@@ -207,15 +207,9 @@ export function shiftWeek(dateStr: string, weeks: number): string {
 export function formatWeekRange(monday: string, sunday: string): string {
   const m = new Date(monday + "T00:00:00");
   const s = new Date(sunday + "T00:00:00");
-  const mDay = m.getDate();
-  const sDay = s.getDate();
   const mMonth = m.toLocaleDateString("en-NG", { month: "short" });
   const sMonth = s.toLocaleDateString("en-NG", { month: "short" });
-  const sYear = s.getFullYear();
-  if (mMonth === sMonth) {
-    return `${mDay} ${mMonth} - ${sDay} ${sMonth} ${sYear}`;
-  }
-  return `${mDay} ${mMonth} - ${sDay} ${sMonth} ${sYear}`;
+  return `${m.getDate()} ${mMonth} - ${s.getDate()} ${sMonth} ${s.getFullYear()}`;
 }
 
 /**

@@ -39,9 +39,7 @@ const MIGRATIONS: Record<number, (db: SQLiteDatabase) => Promise<void>> = {
   },
   2: async (db) => {
     await db.execAsync(`
-      DROP TABLE IF EXISTS expenses;
-
-      CREATE TABLE expenses (
+      CREATE TABLE IF NOT EXISTS expenses_v2 (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         amount INTEGER NOT NULL,
         category_id INTEGER NOT NULL,
@@ -54,11 +52,16 @@ const MIGRATIONS: Record<number, (db: SQLiteDatabase) => Promise<void>> = {
         FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
       );
 
-      CREATE INDEX idx_expenses_date ON expenses(date);
-      CREATE INDEX idx_expenses_category_id ON expenses(category_id);
+      INSERT INTO expenses_v2 (id, amount, category_id, description, date, created_at, updated_at)
+        SELECT id, CAST(amount AS INTEGER), category_id, description, date, created_at, updated_at FROM expenses;
+
+      DROP TABLE expenses;
+      ALTER TABLE expenses_v2 RENAME TO expenses;
+
+      CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses(date);
+      CREATE INDEX IF NOT EXISTS idx_expenses_category_id ON expenses(category_id);
     `);
 
-    await db.runAsync("DELETE FROM categories");
     const categories = [
       { name: "Food", icon: "🍔", color: "#F59E0B", sort_order: 1 },
       { name: "Transport", icon: "🚌", color: "#3B82F6", sort_order: 2 },
@@ -78,15 +81,16 @@ const MIGRATIONS: Record<number, (db: SQLiteDatabase) => Promise<void>> = {
     ];
     for (const cat of categories) {
       await db.runAsync(
-        "INSERT INTO categories (name, icon, color, sort_order) VALUES (?, ?, ?, ?)",
+        "INSERT INTO categories (name, icon, color, sort_order) SELECT ?, ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM categories WHERE name = ?)",
         cat.name,
         cat.icon,
         cat.color,
-        cat.sort_order
+        cat.sort_order,
+        cat.name
       );
     }
   },
-  3: async (db) => {
+  3: async () => {
     // User profile stored in settings table (user_name, user_phone, user_email, onboarding_complete)
     // No schema changes needed - settings table already supports key-value pairs.
     // This migration ensures the DB version is bumped.

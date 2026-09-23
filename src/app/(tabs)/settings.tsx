@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -18,7 +18,6 @@ import DateTimePicker, {
 } from "@react-native-community/datetimepicker";
 import { Card } from "../../components/ui/Card";
 import { Colors } from "../../constants/colors";
-import { Radius } from "../../constants/radius";
 import { Typography } from "../../constants/typography";
 import { Spacing } from "../../constants/spacing";
 import { getSetting, setSetting } from "../../database/settings";
@@ -60,6 +59,7 @@ export default function SettingsScreen() {
   const [reminderTime, setReminderTime] = useState(DEFAULT_TIME);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [permissionDenied, setPermissionDenied] = useState(false);
+  const [notificationsAvailable, setNotificationsAvailable] = useState(true);
   const [loading, setLoading] = useState(true);
 
   const loadSettings = useCallback(async () => {
@@ -72,7 +72,13 @@ export default function SettingsScreen() {
       setReminderTime(time ?? DEFAULT_TIME);
 
       const status = await getNotificationPermissionStatus();
-      setPermissionDenied(status === "denied");
+      if (status === "unsupported") {
+        setNotificationsAvailable(false);
+        setPermissionDenied(false);
+      } else {
+        setNotificationsAvailable(true);
+        setPermissionDenied(status === "denied");
+      }
     } catch (e) {
       console.warn("Failed to load settings:", e);
     } finally {
@@ -87,6 +93,15 @@ export default function SettingsScreen() {
   );
 
   async function handleToggleReminder(value: boolean) {
+    if (value && !notificationsAvailable) {
+      setPermissionDenied(false);
+      Alert.alert(
+        "Reminders Unavailable",
+        "Daily reminders require a development build and aren't available in Expo Go on Android."
+      );
+      return;
+    }
+
     if (value) {
       const granted = await requestNotificationPermission();
       if (!granted) {
@@ -99,9 +114,17 @@ export default function SettingsScreen() {
         return;
       }
       setPermissionDenied(false);
-      await scheduleDailyReminder(reminderTime);
-      await setSetting(db, REMINDER_ENABLED_KEY, "true");
-      setReminderEnabled(true);
+      try {
+        await scheduleDailyReminder(reminderTime);
+        await setSetting(db, REMINDER_ENABLED_KEY, "true");
+        setReminderEnabled(true);
+      } catch (e) {
+        console.warn("Failed to schedule reminder:", e);
+        Alert.alert(
+          "Error",
+          "Could not enable reminders on this device. Please try again."
+        );
+      }
     } else {
       await cancelDailyReminder();
       await setSetting(db, REMINDER_ENABLED_KEY, "false");
@@ -119,8 +142,12 @@ export default function SettingsScreen() {
     setReminderTime(newTime);
     await setSetting(db, REMINDER_TIME_KEY, newTime);
 
-    if (reminderEnabled) {
-      await scheduleDailyReminder(newTime);
+    if (reminderEnabled && notificationsAvailable) {
+      try {
+        await scheduleDailyReminder(newTime);
+      } catch (e) {
+        console.warn("Failed to reschedule reminder:", e);
+      }
     }
   }
 
@@ -173,10 +200,28 @@ export default function SettingsScreen() {
               <Switch
                 value={reminderEnabled}
                 onValueChange={handleToggleReminder}
+                disabled={!notificationsAvailable}
                 trackColor={{ false: Colors.disabled, true: Colors.primaryLight }}
                 thumbColor={reminderEnabled ? Colors.surface : Colors.surface}
               />
             </View>
+
+            {!notificationsAvailable && (
+              <>
+                <View style={styles.settingDivider} />
+                <View style={styles.permissionWarning}>
+                  <Ionicons
+                    name="warning-outline"
+                    size={18}
+                    color={Colors.warning}
+                  />
+                  <Text style={styles.permissionText}>
+                    Daily reminders aren't available in Expo Go on Android.
+                    Install a development build to use them.
+                  </Text>
+                </View>
+              </>
+            )}
 
             {reminderEnabled && (
               <>
