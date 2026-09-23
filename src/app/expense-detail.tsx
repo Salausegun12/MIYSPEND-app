@@ -12,14 +12,15 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { useSQLiteContext } from "expo-sqlite";
 import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { Input } from "../components/ui/Input";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
-import { IconContainer } from "../components/ui/IconContainer";
 import { Colors } from "../constants/colors";
 import { Radius } from "../constants/radius";
+import { Shadows } from "../constants/shadows";
 import { Typography } from "../constants/typography";
 import { Spacing } from "../constants/spacing";
 import {
@@ -297,20 +298,22 @@ export default function ExpenseDetailScreen() {
       >
         {!editing ? (
           <>
-            <View style={styles.heroSection}>
-              <IconContainer
-                size={56}
-                backgroundColor={expense.category_color + "20"}
-              >
+            <LinearGradient
+              colors={Colors.gradient.primary}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.heroSection}
+            >
+              <View style={styles.heroIconChip}>
                 <Text style={styles.heroIcon}>{expense.category_icon}</Text>
-              </IconContainer>
+              </View>
               <Text style={styles.heroAmount}>
                 {formatKoboAmount(expense.amount)}
               </Text>
               <Text style={styles.heroCategory}>
                 {expense.category_name}
               </Text>
-            </View>
+            </LinearGradient>
 
             <Card style={styles.detailsCard}>
               <View style={styles.detailRow}>
@@ -596,17 +599,27 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: Spacing.xl,
     gap: Spacing.sm,
+    borderRadius: Radius.xxl,
+    ...Shadows.md,
+  },
+  heroIconChip: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: Colors.white + "26",
+    alignItems: "center",
+    justifyContent: "center",
   },
   heroIcon: {
     fontSize: 28,
   },
   heroAmount: {
     ...Typography.display,
-    color: Colors.textPrimary,
+    color: Colors.white,
   },
   heroCategory: {
     ...Typography.bodyMedium,
-    color: Colors.textSecondary,
+    color: Colors.white + "CC",
   },
   detailsCard: {
     gap: Spacing.sm,
@@ -661,7 +674,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: Spacing.base,
     paddingVertical: Spacing.sm,
-    borderRadius: Radius.md,
+    borderRadius: Radius.xl,
     borderWidth: 1,
     borderColor: Colors.border,
     backgroundColor: Colors.surface,

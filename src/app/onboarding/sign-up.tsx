@@ -11,6 +11,7 @@ import {
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { useSQLiteContext } from "expo-sqlite";
 import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
@@ -77,9 +78,14 @@ export default function OnboardingSignUpScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.header}>
-            <View style={styles.iconCircle}>
+            <LinearGradient
+              colors={Colors.gradient.primary}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.iconCircle}
+            >
               <Ionicons name="wallet" size={36} color={Colors.surface} />
-            </View>
+            </LinearGradient>
             <Text style={styles.title}>Create Your Profile</Text>
             <Text style={styles.desc}>
               Tell us a bit about yourself so we can personalize your

@@ -204,7 +204,14 @@ export default function HistoryScreen() {
         >
           {dateGroups.map((group) => (
             <View key={group.dateLabel} style={styles.groupSection}>
-              <Text style={styles.groupDateLabel}>{group.dateLabel}</Text>
+              <View style={styles.groupHeader}>
+                <Text style={styles.groupDateLabel}>{group.dateLabel}</Text>
+                <Text style={styles.groupTotal}>
+                  {formatKoboAmount(
+                    group.expenses.reduce((sum, e) => sum + e.amount, 0)
+                  )}
+                </Text>
+              </View>
               <Card style={styles.groupCard}>
                 {group.expenses.map((expense, index) => (
                   <React.Fragment key={expense.id}>
@@ -301,13 +308,12 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     paddingHorizontal: Spacing.base,
     paddingVertical: Spacing.sm,
-    borderRadius: Radius.md,
+    borderRadius: Radius.xl,
     borderWidth: 1,
     borderColor: Colors.border,
     backgroundColor: Colors.surface,
   },
   filterChipActive: {
-    borderWidth: 1.5,
     borderColor: Colors.primary,
     backgroundColor: Colors.primary,
   },
@@ -327,10 +333,21 @@ const styles = StyleSheet.create({
   groupSection: {
     gap: Spacing.sm,
   },
+  groupHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
   groupDateLabel: {
     ...Typography.label,
     color: Colors.textSecondary,
     letterSpacing: 0.5,
+    textTransform: "uppercase",
+  },
+  groupTotal: {
+    ...Typography.bodySmall,
+    color: Colors.textPrimary,
+    fontWeight: "600",
   },
   groupCard: {
     padding: Spacing.sm,

@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { Colors } from "../../constants/colors";
 import { Radius } from "../../constants/radius";
+import { Shadows } from "../../constants/shadows";
 import { Typography } from "../../constants/typography";
 import { Spacing } from "../../constants/spacing";
 
@@ -71,13 +72,14 @@ export function Button({
 const styles = StyleSheet.create({
   base: {
     height: 52,
-    borderRadius: Radius.md,
+    borderRadius: Radius.lg,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: Spacing.xl,
   },
   primary: {
     backgroundColor: Colors.primary,
+    ...Shadows.md,
   },
   primaryPressed: {
     backgroundColor: Colors.pressed.primary,

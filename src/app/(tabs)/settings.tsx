@@ -10,6 +10,7 @@ import {
   Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { useSQLiteContext } from "expo-sqlite";
 import { useFocusEffect } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -18,6 +19,8 @@ import DateTimePicker, {
 } from "@react-native-community/datetimepicker";
 import { Card } from "../../components/ui/Card";
 import { Colors } from "../../constants/colors";
+import { Radius } from "../../constants/radius";
+import { Shadows } from "../../constants/shadows";
 import { Typography } from "../../constants/typography";
 import { Spacing } from "../../constants/spacing";
 import { getSetting, setSetting } from "../../database/settings";
@@ -172,13 +175,23 @@ export default function SettingsScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.brandSection}>
-          <View style={styles.brandIcon}>
+        <LinearGradient
+          colors={Colors.gradient.soft}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.brandCard}
+        >
+          <LinearGradient
+            colors={Colors.gradient.primary}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.brandIcon}
+          >
             <Ionicons name="wallet" size={32} color={Colors.surface} />
-          </View>
+          </LinearGradient>
           <Text style={styles.brandName}>MiySpend</Text>
           <Text style={styles.brandTagline}>Track your spending wisely</Text>
-        </View>
+        </LinearGradient>
 
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Reminders</Text>
@@ -359,18 +372,22 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.xxxl,
     gap: Spacing.lg,
   },
-  brandSection: {
+  brandCard: {
     alignItems: "center",
     paddingVertical: Spacing.xl,
+    paddingHorizontal: Spacing.lg,
     gap: Spacing.sm,
+    borderRadius: Radius.xxl,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   brandIcon: {
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: Colors.primary,
     alignItems: "center",
     justifyContent: "center",
+    ...Shadows.sm,
   },
   brandName: {
     ...Typography.h2,

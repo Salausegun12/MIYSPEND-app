@@ -3,6 +3,13 @@ export const Colors = {
   primaryLight: "#16B364",
   primarySoft: "#E8F7F1",
 
+  white: "#FFFFFF",
+
+  gradient: {
+    primary: ["#1CA888", "#006B5B"] as const,
+    soft: ["#EAF8F2", "#D8F0E7"] as const,
+  },
+
   background: "#F8FAF9",
   surface: "#FFFFFF",
 

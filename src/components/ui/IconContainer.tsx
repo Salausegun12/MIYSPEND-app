@@ -1,6 +1,7 @@
 import React from "react";
 import { View, StyleSheet, ViewStyle } from "react-native";
 import { Colors } from "../../constants/colors";
+import { Shadows } from "../../constants/shadows";
 
 interface IconContainerProps {
   children: React.ReactNode;
@@ -26,6 +27,7 @@ export function IconContainer({
           backgroundColor,
         },
         style,
+        Shadows.sm,
       ]}
     >
       {children}

@@ -53,7 +53,7 @@ const styles = StyleSheet.create({
     height: 52,
     borderWidth: 1,
     borderColor: Colors.border,
-    borderRadius: Radius.md,
+    borderRadius: Radius.lg,
     backgroundColor: Colors.surface,
     paddingHorizontal: Spacing.base,
     ...Typography.body,
@@ -61,6 +61,7 @@ const styles = StyleSheet.create({
   },
   inputFocused: {
     borderColor: Colors.primary,
+    backgroundColor: Colors.primarySoft + "30",
   },
   inputError: {
     borderColor: Colors.error,

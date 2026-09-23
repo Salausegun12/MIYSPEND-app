@@ -29,6 +29,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.xl,
   },
   icon: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: Colors.primarySoft,
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: Spacing.base,
   },
   title: {

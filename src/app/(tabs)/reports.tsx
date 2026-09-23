@@ -16,6 +16,7 @@ import { EmptyState } from "../../components/ui/EmptyState";
 import { IconContainer } from "../../components/ui/IconContainer";
 import { Colors } from "../../constants/colors";
 import { Radius } from "../../constants/radius";
+import { Shadows } from "../../constants/shadows";
 import { Typography } from "../../constants/typography";
 import { Spacing } from "../../constants/spacing";
 import {
@@ -201,13 +202,15 @@ export default function ReportsScreen() {
           >
             <Ionicons name="chevron-back" size={24} color={Colors.primary} />
           </Pressable>
-          <View style={styles.weekInfo}>
-            <Text style={styles.weekLabel}>
-              {isCurrentWeek ? "This Week" : "Week of"}
-            </Text>
-            <Text style={styles.weekRange}>
-              {formatWeekRange(selectedMonday, weekSunday)}
-            </Text>
+          <View style={styles.weekInfoPill}>
+            <View style={styles.weekInfo}>
+              <Text style={styles.weekLabel}>
+                {isCurrentWeek ? "This Week" : "Week of"}
+              </Text>
+              <Text style={styles.weekRange}>
+                {formatWeekRange(selectedMonday, weekSunday)}
+              </Text>
+            </View>
           </View>
           <Pressable
             onPress={() => setSelectedMonday(shiftWeek(selectedMonday, 1))}
@@ -237,9 +240,9 @@ export default function ReportsScreen() {
         ) : (
           <>
             <View style={styles.summaryRow}>
-              <Card style={styles.summaryCard}>
-                <Text style={styles.summaryLabel}>Total Spent</Text>
-                <Text style={styles.summaryAmount}>
+              <Card style={styles.summaryCardHero}>
+                <Text style={styles.summaryLabelHero}>Total Spent</Text>
+                <Text style={styles.summaryAmountHero}>
                   {formatKoboAmount(weekTotal)}
                 </Text>
               </Card>
@@ -278,9 +281,11 @@ export default function ReportsScreen() {
                             {
                               width: `${barWidth}%`,
                               backgroundColor:
-                                day.total > 0
+                                day.total === 0
+                                  ? Colors.disabled
+                                  : isToday
                                   ? Colors.primary
-                                  : Colors.disabled,
+                                  : Colors.primaryLight,
                             },
                           ]}
                         />
@@ -495,6 +500,17 @@ const styles = StyleSheet.create({
   navArrow: {
     padding: Spacing.sm,
   },
+  weekInfoPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: Radius.xl,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
+    ...Shadows.sm,
+  },
   weekInfo: {
     alignItems: "center",
     gap: 2,
@@ -522,6 +538,21 @@ const styles = StyleSheet.create({
   summaryAmount: {
     ...Typography.amountSmall,
     color: Colors.textPrimary,
+  },
+  summaryCardHero: {
+    flex: 1,
+    backgroundColor: Colors.primarySoft,
+    borderColor: Colors.primarySoft,
+  },
+  summaryLabelHero: {
+    ...Typography.bodySmall,
+    color: Colors.primary,
+    marginBottom: Spacing.xs,
+    fontWeight: "600",
+  },
+  summaryAmountHero: {
+    ...Typography.amountSmall,
+    color: Colors.primary,
   },
   section: {
     gap: Spacing.sm,

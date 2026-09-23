@@ -9,12 +9,15 @@ import {
 } from "react-native";
 import { useRouter, Href, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { useSQLiteContext } from "expo-sqlite";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { IconContainer } from "../../components/ui/IconContainer";
 import { Colors } from "../../constants/colors";
+import { Radius } from "../../constants/radius";
+import { Shadows } from "../../constants/shadows";
 import { Typography } from "../../constants/typography";
 import { Spacing } from "../../constants/spacing";
 import {
@@ -99,75 +102,98 @@ export default function HomeScreen() {
           <Text style={styles.brand}>MiySpend</Text>
         </View>
 
-        {hasExpenses ? (
-          <>
-            <View style={styles.summaryRow}>
-              <Card style={styles.summaryCard}>
-                <Text style={styles.summaryLabel}>Today's spending</Text>
-                <Text style={styles.summaryAmount}>
-                  {formatKoboAmount(todayTotal)}
-                </Text>
-              </Card>
-              <Card style={styles.summaryCard}>
-                <Text style={styles.summaryLabel}>This week</Text>
-                <Text style={styles.summaryAmount}>
-                  {formatKoboAmount(weekTotal)}
-                </Text>
-              </Card>
-            </View>
-
-            <Card style={styles.countCard}>
-              <Text style={styles.countText}>
-                {todayCount} {todayCount === 1 ? "transaction" : "transactions"}{" "}
-                today
+        <LinearGradient
+          colors={Colors.gradient.primary}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.hero}
+        >
+          <View style={styles.heroTop}>
+            <View>
+              <Text style={styles.heroLabel}>Today's spending</Text>
+              <Text style={styles.heroAmount}>
+                {formatKoboAmount(todayTotal)}
               </Text>
-            </Card>
-
-            <View style={styles.recentSection}>
-              <Text style={styles.sectionTitle}>Recent expenses</Text>
-              <Card style={styles.recentCard}>
-                {recentExpenses.map((expense, index) => (
-                  <React.Fragment key={expense.id}>
-                    {index > 0 && <View style={styles.divider} />}
-                    <Pressable
-                      onPress={() =>
-                        router.push(`/expense-detail?id=${expense.id}` as Href)
-                      }
-                      style={styles.expenseRow}
-                    >
-                      <IconContainer
-                        size={40}
-                        backgroundColor={expense.category_color + "20"}
-                      >
-                        <Text style={styles.expenseIcon}>
-                          {expense.category_icon}
-                        </Text>
-                      </IconContainer>
-                      <View style={styles.expenseInfo}>
-                        <Text style={styles.expenseName}>
-                          {expense.category_name}
-                        </Text>
-                        <Text style={styles.expenseDesc} numberOfLines={1}>
-                          {expense.description}
-                        </Text>
-                      </View>
-                      <Text style={styles.expenseAmount}>
-                        {formatKoboAmount(expense.amount)}
-                      </Text>
-                    </Pressable>
-                  </React.Fragment>
-                ))}
-              </Card>
             </View>
-          </>
+            <View style={styles.heroBadge}>
+              <Ionicons name="wallet" size={24} color={Colors.primary} />
+            </View>
+          </View>
+
+          <View style={styles.heroChips}>
+            <View style={styles.heroChip}>
+              <Text style={styles.heroChipLabel}>This week</Text>
+              <Text style={styles.heroChipValue}>
+                {formatKoboAmount(weekTotal)}
+              </Text>
+            </View>
+            <View style={styles.heroChip}>
+              <Text style={styles.heroChipLabel}>Transactions today</Text>
+              <Text style={styles.heroChipValue}>{todayCount}</Text>
+            </View>
+          </View>
+        </LinearGradient>
+
+        {hasExpenses ? (
+          <View style={styles.recentSection}>
+            <View style={styles.recentHeader}>
+              <Text style={styles.sectionTitle}>Recent expenses</Text>
+              <Pressable
+                onPress={() => router.navigate("/(tabs)/history" as Href)}
+                style={styles.seeAll}
+              >
+                <Text style={styles.seeAllText}>See all</Text>
+                <Ionicons
+                  name="chevron-forward"
+                  size={16}
+                  color={Colors.primary}
+                />
+              </Pressable>
+            </View>
+            <Card style={styles.recentCard}>
+              {recentExpenses.map((expense, index) => (
+                <React.Fragment key={expense.id}>
+                  {index > 0 && <View style={styles.divider} />}
+                  <Pressable
+                    onPress={() =>
+                      router.push(`/expense-detail?id=${expense.id}` as Href)
+                    }
+                    style={styles.expenseRow}
+                  >
+                    <IconContainer
+                      size={40}
+                      backgroundColor={expense.category_color + "20"}
+                    >
+                      <Text style={styles.expenseIcon}>
+                        {expense.category_icon}
+                      </Text>
+                    </IconContainer>
+                    <View style={styles.expenseInfo}>
+                      <Text style={styles.expenseName}>
+                        {expense.category_name}
+                      </Text>
+                      <Text style={styles.expenseDesc} numberOfLines={1}>
+                        {expense.description}
+                      </Text>
+                    </View>
+                    <Text style={styles.expenseAmount}>
+                      {formatKoboAmount(expense.amount)}
+                    </Text>
+                  </Pressable>
+                </React.Fragment>
+              ))}
+            </Card>
+          </View>
         ) : (
           <Card style={styles.emptyCard}>
             <View style={styles.emptyContent}>
-              <Ionicons
-                name="wallet-outline"
-                size={48}
-                color={Colors.primary}
-              />
+              <View style={styles.emptyIcon}>
+                <Ionicons
+                  name="wallet-outline"
+                  size={40}
+                  color={Colors.primary}
+                />
+              </View>
               <Text style={styles.emptyTitle}>No expenses yet</Text>
               <Text style={styles.emptyMessage}>
                 Start recording your spending to see your financial activity
@@ -220,31 +246,74 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     marginTop: Spacing.xs,
   },
-  summaryRow: {
+  hero: {
+    borderRadius: Radius.xxl,
+    padding: Spacing.lg,
+    gap: Spacing.lg,
+    ...Shadows.lg,
+  },
+  heroTop: {
     flexDirection: "row",
-    gap: Spacing.base,
-  },
-  summaryCard: {
-    flex: 1,
-  },
-  summaryLabel: {
-    ...Typography.bodySmall,
-    color: Colors.textSecondary,
-    marginBottom: Spacing.xs,
-  },
-  summaryAmount: {
-    ...Typography.amountSmall,
-    color: Colors.textPrimary,
-  },
-  countCard: {
+    justifyContent: "space-between",
     alignItems: "center",
   },
-  countText: {
+  heroLabel: {
+    ...Typography.bodySmall,
+    color: Colors.white + "CC",
+    marginBottom: Spacing.xs,
+  },
+  heroAmount: {
+    ...Typography.display,
+    fontSize: 38,
+    color: Colors.white,
+  },
+  heroBadge: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Colors.white + "26",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  heroChips: {
+    flexDirection: "row",
+    gap: Spacing.sm,
+  },
+  heroChip: {
+    flex: 1,
+    backgroundColor: Colors.white + "1F",
+    borderRadius: Radius.md,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.base,
+    gap: 2,
+  },
+  heroChipLabel: {
+    ...Typography.caption,
+    color: Colors.white + "CC",
+  },
+  heroChipValue: {
     ...Typography.bodyMedium,
-    color: Colors.textSecondary,
+    color: Colors.white,
+    fontWeight: "600",
   },
   recentSection: {
     gap: Spacing.sm,
+  },
+  recentHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  seeAll: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+    paddingVertical: Spacing.xs,
+  },
+  seeAllText: {
+    ...Typography.bodySmall,
+    color: Colors.primary,
+    fontWeight: "600",
   },
   sectionTitle: {
     ...Typography.h3,
@@ -287,6 +356,14 @@ const styles = StyleSheet.create({
   emptyCard: {
     paddingVertical: Spacing.xxxl,
     alignItems: "center",
+  },
+  emptyIcon: {
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    backgroundColor: Colors.primarySoft,
+    alignItems: "center",
+    justifyContent: "center",
   },
   emptyContent: {
     alignItems: "center",
