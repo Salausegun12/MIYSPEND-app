@@ -32,7 +32,10 @@ export function getWeekStart(): string {
 export function getWeekEnd(): string {
   const d = new Date();
   const day = d.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
-  const diff = day === 0 ? 0 : 6 - day; // days until Sunday
+  // Days until the coming Sunday. Must be (7 - day) % 7, not 6 - day:
+  // 6 - day counts days until Saturday, which silently dropped Sunday from
+  // every Monday-Sunday total.
+  const diff = (7 - day) % 7;
   const sunday = new Date(d);
   sunday.setDate(d.getDate() + diff);
   const y = sunday.getFullYear();
@@ -179,7 +182,7 @@ export function getWeekStartForDate(dateStr: string): string {
 export function getWeekEndForDate(dateStr: string): string {
   const d = new Date(dateStr + "T00:00:00");
   const day = d.getDay();
-  const diff = day === 0 ? 0 : 6 - day;
+  const diff = (7 - day) % 7;
   const sunday = new Date(d);
   sunday.setDate(d.getDate() + diff);
   const y = sunday.getFullYear();

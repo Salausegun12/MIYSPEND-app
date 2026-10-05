@@ -49,3 +49,15 @@ export function formatKoboAmount(kobo: number): string {
   const naira = koboToNaira(kobo);
   return `₦${naira.toLocaleString("en-NG", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 }
+
+/**
+ * Format a kobo amount with an explicit + or - sign, for period-over-period
+ * comparisons. formatKoboAmount(-50000) would render "₦-500", so the sign is
+ * pulled out in front of the currency symbol instead.
+ * 50000 → "+₦500", -50000 → "-₦500", 0 → "₦0"
+ */
+export function formatSignedKoboAmount(kobo: number): string {
+  if (kobo === 0) return formatKoboAmount(0);
+  const sign = kobo > 0 ? "+" : "-";
+  return `${sign}${formatKoboAmount(Math.abs(kobo))}`;
+}

@@ -71,6 +71,19 @@ export async function getIncomeByDateRange(
   );
 }
 
+export async function getTotalIncome(
+  db: SQLiteDatabase,
+  startDate: string,
+  endDate: string
+): Promise<number> {
+  const result = await db.getFirstAsync<{ total: number }>(
+    "SELECT COALESCE(SUM(amount), 0) as total FROM income WHERE income_date BETWEEN ? AND ?",
+    startDate,
+    endDate
+  );
+  return result?.total ?? 0;
+}
+
 export async function updateIncome(
   db: SQLiteDatabase,
   id: number,

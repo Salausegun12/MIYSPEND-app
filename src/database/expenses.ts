@@ -136,6 +136,15 @@ export async function getExpensesByDateRange(
   );
 }
 
+export async function getOldestExpenseDate(
+  db: SQLiteDatabase
+): Promise<string | null> {
+  const result = await db.getFirstAsync<{ oldest_date: string | null }>(
+    "SELECT MIN(date) as oldest_date FROM expenses"
+  );
+  return result?.oldest_date?.slice(0, 10) ?? null;
+}
+
 export async function getExpensesByCategory(
   db: SQLiteDatabase,
   categoryId: number
