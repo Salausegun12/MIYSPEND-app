@@ -1,6 +1,6 @@
 import { SQLiteDatabase } from "expo-sqlite";
 
-const CURRENT_DB_VERSION = 4;
+const CURRENT_DB_VERSION = 5;
 
 const MIGRATIONS: Record<number, (db: SQLiteDatabase) => Promise<void>> = {
   1: async (db) => {
@@ -111,6 +111,20 @@ const MIGRATIONS: Record<number, (db: SQLiteDatabase) => Promise<void>> = {
 
       CREATE INDEX IF NOT EXISTS idx_income_date ON income(income_date);
       CREATE INDEX IF NOT EXISTS idx_income_date_source ON income(income_date, source);
+    `);
+  },
+  5: async (db) => {
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS budgets (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        category_id INTEGER NOT NULL UNIQUE,
+        limit_amount INTEGER NOT NULL,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+        FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_budgets_category_id ON budgets(category_id);
     `);
   },
 };

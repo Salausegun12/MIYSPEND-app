@@ -30,6 +30,21 @@ export interface Setting {
   value: string;
 }
 
+export interface Budget {
+  id: number;
+  category_id: number;
+  limit_amount: number; // stored as integer kobo
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BudgetWithCategory extends Budget {
+  category_name: string;
+  category_icon: string;
+  category_color: string;
+  spent: number; // integer kobo spent so far in the budget's month
+}
+
 export interface Income {
   id: number;
   amount: number; // stored as integer kobo
@@ -79,3 +94,5 @@ export const INCOME_SOURCES: IncomeSource[] = [
   "Refund",
   "Other",
 ];
+
+export type BudgetStatus = "normal" | "near" | "reached" | "over";

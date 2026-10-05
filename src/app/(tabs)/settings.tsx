@@ -12,7 +12,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSQLiteContext } from "expo-sqlite";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter, Href } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import DateTimePicker, {
   DateTimePickerEvent,
@@ -24,6 +24,12 @@ import { Shadows } from "../../constants/shadows";
 import { Typography } from "../../constants/typography";
 import { Spacing } from "../../constants/spacing";
 import { getSetting, setSetting } from "../../database/settings";
+import {
+  getBudgetsWithSpending,
+  getCurrentBudgetPeriod,
+} from "../../database/budget";
+import { getMonthEnd, getMonthStart } from "../../utils/date";
+import { calculateBudgetProgress } from "../../utils/budget";
 import {
   requestNotificationPermission,
   getNotificationPermissionStatus,
@@ -57,6 +63,7 @@ const DEFAULT_TIME = "20:00";
 
 export default function SettingsScreen() {
   const db = useSQLiteContext();
+  const router = useRouter();
 
   const [reminderEnabled, setReminderEnabled] = useState(false);
   const [reminderTime, setReminderTime] = useState(DEFAULT_TIME);
@@ -64,6 +71,7 @@ export default function SettingsScreen() {
   const [permissionDenied, setPermissionDenied] = useState(false);
   const [notificationsAvailable, setNotificationsAvailable] = useState(true);
   const [loading, setLoading] = useState(true);
+  const [budgetSummary, setBudgetSummary] = useState<string | null>(null);
 
   const loadSettings = useCallback(async () => {
     try {
@@ -73,6 +81,25 @@ export default function SettingsScreen() {
       ]);
       setReminderEnabled(enabled === "true");
       setReminderTime(time ?? DEFAULT_TIME);
+
+      const budgets = await getBudgetsWithSpending(
+        db,
+        getCurrentBudgetPeriod(getMonthStart(), getMonthEnd())
+      );
+      if (budgets.length === 0) {
+        setBudgetSummary("Set a monthly limit on a category");
+      } else {
+        const over = budgets.filter(
+          (b) => calculateBudgetProgress(b).status === "over"
+        ).length;
+        const count = budgets.length;
+        const plural = count === 1 ? "budget" : "budgets";
+        setBudgetSummary(
+          over > 0
+            ? `${count} ${plural} · ${over} over limit`
+            : `${count} ${plural} set`
+        );
+      }
 
       const status = await getNotificationPermissionStatus();
       if (status === "unsupported") {
@@ -283,6 +310,42 @@ export default function SettingsScreen() {
           </Card>
         </View>
 
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Budgets</Text>
+          <Card style={styles.card}>
+            <Pressable
+              onPress={() => router.push("/budget" as Href)}
+              style={({ pressed }) => [
+                styles.settingRow,
+                pressed && styles.settingRowPressed,
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Budgets, set monthly limits per category"
+            >
+              <View style={styles.settingInfo}>
+                <Ionicons
+                  name="pie-chart-outline"
+                  size={22}
+                  color={Colors.primary}
+                />
+                <View style={styles.settingText}>
+                  <Text style={styles.settingTitle}>Budgets</Text>
+                  <Text style={styles.settingDesc}>
+                    {budgetSummary === null
+                      ? "Set a monthly limit on a category"
+                      : budgetSummary}
+                  </Text>
+                </View>
+              </View>
+              <Ionicons
+                name="chevron-forward"
+                size={20}
+                color={Colors.textSecondary}
+              />
+            </Pressable>
+          </Card>
+        </View>
+
         {showTimePicker && (
           <DateTimePicker
             value={timeStringToDate(reminderTime)}
@@ -413,6 +476,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingVertical: Spacing.xs,
+  },
+  settingRowPressed: {
+    opacity: 0.65,
   },
   settingInfo: {
     flexDirection: "row",
