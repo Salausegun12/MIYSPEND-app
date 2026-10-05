@@ -70,6 +70,9 @@ function RootNavigator() {
       <Stack.Screen name="income-detail" options={{ presentation: "modal" }} />
       <Stack.Screen name="budget" options={{ presentation: "modal" }} />
       <Stack.Screen name="budget-form" options={{ presentation: "modal" }} />
+      <Stack.Screen name="goals" options={{ presentation: "modal" }} />
+      <Stack.Screen name="goal-detail" options={{ presentation: "modal" }} />
+      <Stack.Screen name="goal-form" options={{ presentation: "modal" }} />
       <Stack.Screen name="onboarding" />
     </Stack>
   );

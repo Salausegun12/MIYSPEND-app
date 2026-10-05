@@ -29,7 +29,9 @@ import {
   getCurrentBudgetPeriod,
 } from "../../database/budget";
 import { getMonthEnd, getMonthStart } from "../../utils/date";
+import { getGoalsWithBalances } from "../../database/savingsGoals";
 import { calculateBudgetProgress } from "../../utils/budget";
+import { formatKoboAmount } from "../../utils/money";
 import {
   requestNotificationPermission,
   getNotificationPermissionStatus,
@@ -72,6 +74,7 @@ export default function SettingsScreen() {
   const [notificationsAvailable, setNotificationsAvailable] = useState(true);
   const [loading, setLoading] = useState(true);
   const [budgetSummary, setBudgetSummary] = useState<string | null>(null);
+  const [goalsSummary, setGoalsSummary] = useState<string | null>(null);
 
   const loadSettings = useCallback(async () => {
     try {
@@ -98,6 +101,17 @@ export default function SettingsScreen() {
           over > 0
             ? `${count} ${plural} · ${over} over limit`
             : `${count} ${plural} set`
+        );
+      }
+
+      const goals = await getGoalsWithBalances(db);
+      if (goals.length === 0) {
+        setGoalsSummary("Track what you are saving for");
+      } else {
+        const saved = goals.reduce((sum, g) => sum + g.balance, 0);
+        const count = goals.length;
+        setGoalsSummary(
+          `${count} ${count === 1 ? "goal" : "goals"} · ${formatKoboAmount(saved)} saved`
         );
       }
 
@@ -334,6 +348,42 @@ export default function SettingsScreen() {
                     {budgetSummary === null
                       ? "Set a monthly limit on a category"
                       : budgetSummary}
+                  </Text>
+                </View>
+              </View>
+              <Ionicons
+                name="chevron-forward"
+                size={20}
+                color={Colors.textSecondary}
+              />
+            </Pressable>
+          </Card>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Savings</Text>
+          <Card style={styles.card}>
+            <Pressable
+              onPress={() => router.push("/goals" as Href)}
+              style={({ pressed }) => [
+                styles.settingRow,
+                pressed && styles.settingRowPressed,
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Savings goals, track what you are saving for"
+            >
+              <View style={styles.settingInfo}>
+                <Ionicons
+                  name="flag-outline"
+                  size={22}
+                  color={Colors.primary}
+                />
+                <View style={styles.settingText}>
+                  <Text style={styles.settingTitle}>Savings Goals</Text>
+                  <Text style={styles.settingDesc}>
+                    {goalsSummary === null
+                      ? "Track what you are saving for"
+                      : goalsSummary}
                   </Text>
                 </View>
               </View>
