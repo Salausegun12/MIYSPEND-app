@@ -208,6 +208,11 @@ export default function HomeScreen() {
             title="+ Add Expense"
             onPress={() => router.push("/add-expense" as Href)}
           />
+          <Button
+            title="+ Add Income"
+            variant="secondary"
+            onPress={() => router.push("/add-income" as Href)}
+          />
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -382,5 +387,6 @@ const styles = StyleSheet.create({
   },
   buttonWrapper: {
     marginTop: Spacing.sm,
+    gap: Spacing.sm,
   },
 });
