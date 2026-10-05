@@ -1,6 +1,6 @@
 import { SQLiteDatabase } from "expo-sqlite";
 
-const CURRENT_DB_VERSION = 5;
+const CURRENT_DB_VERSION = 6;
 
 const MIGRATIONS: Record<number, (db: SQLiteDatabase) => Promise<void>> = {
   1: async (db) => {
@@ -127,6 +127,46 @@ const MIGRATIONS: Record<number, (db: SQLiteDatabase) => Promise<void>> = {
       CREATE INDEX IF NOT EXISTS idx_budgets_category_id ON budgets(category_id);
     `);
   },
+  6: async (db) => {
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS savings_goals (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        target_amount INTEGER NOT NULL,
+        current_amount INTEGER NOT NULL DEFAULT 0,
+        target_date TEXT,
+        note TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+        CHECK (length(trim(name)) > 0),
+        CHECK (typeof(target_amount) = 'integer' AND target_amount > 0),
+        CHECK (typeof(current_amount) = 'integer' AND current_amount >= 0),
+        CHECK (
+          target_date IS NULL OR
+          target_date GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'
+        )
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_savings_goals_target_date
+        ON savings_goals(target_date);
+
+      CREATE TABLE IF NOT EXISTS contributions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        goal_id INTEGER NOT NULL,
+        amount INTEGER NOT NULL,
+        date TEXT NOT NULL DEFAULT (date('now')),
+        note TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        CHECK (typeof(amount) = 'integer' AND amount > 0),
+        FOREIGN KEY (goal_id) REFERENCES savings_goals(id) ON DELETE CASCADE
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_contributions_goal_id
+        ON contributions(goal_id);
+      CREATE INDEX IF NOT EXISTS idx_contributions_date
+        ON contributions(date);
+    `);
+  },
 };
 
 export async function migrateDatabase(db: SQLiteDatabase): Promise<void> {
@@ -217,6 +257,10 @@ export async function seedDefaultSettings(db: SQLiteDatabase): Promise<void> {
 }
 
 export async function initializeDatabase(db: SQLiteDatabase): Promise<void> {
+  // Foreign keys are a per-connection setting that defaults to OFF, and
+  // migrateDatabase() returns early once the schema is current. Without this,
+  // only a brand new database would ever enforce ON DELETE CASCADE.
+  await db.execAsync("PRAGMA foreign_keys = ON;");
   await migrateDatabase(db);
   await seedDefaultCategories(db);
   await seedDefaultSettings(db);

@@ -96,3 +96,76 @@ export const INCOME_SOURCES: IncomeSource[] = [
 ];
 
 export type BudgetStatus = "normal" | "near" | "reached" | "over";
+
+/**
+ * All amounts are integer kobo (NG minor units). Never floats.
+ */
+export interface SavingsGoal {
+  id: number;
+  name: string;
+  target_amount: number;
+  /**
+   * Denormalised cache of the goal balance, kept equal to the sum of the
+   * goal's contributions. The contributions ledger is the source of truth;
+   * read it via SavingsGoalWithBalance.balance.
+   */
+  current_amount: number;
+  /** ISO YYYY-MM-DD, or null when the goal has no deadline. */
+  target_date: string | null;
+  note: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Contribution {
+  id: number;
+  goal_id: number;
+  amount: number;
+  /** ISO YYYY-MM-DD, defaults to today. */
+  date: string;
+  note: string;
+  created_at: string;
+}
+
+/** A goal joined with its balance derived from the contributions ledger. */
+export interface SavingsGoalWithBalance extends SavingsGoal {
+  balance: number;
+  remaining: number;
+  percent_complete: number;
+  is_reached: boolean;
+  contribution_count: number;
+}
+
+export interface CreateSavingsGoalInput {
+  name: string;
+  target_amount: number;
+  /**
+   * Optional opening balance for money saved before this goal was tracked.
+   * Stored as the goal balance and recorded as a matching opening
+   * contribution so the ledger stays complete.
+   */
+  current_amount?: number;
+  target_date?: string | null;
+  note?: string;
+}
+
+export interface UpdateSavingsGoalInput {
+  name?: string;
+  target_amount?: number;
+  target_date?: string | null;
+  note?: string;
+}
+
+export interface CreateContributionInput {
+  goal_id: number;
+  amount: number;
+  date?: string;
+  note?: string;
+}
+
+export interface GoalBalanceReconciliation {
+  goal_id: number;
+  cached: number;
+  derived: number;
+  corrected: boolean;
+}
