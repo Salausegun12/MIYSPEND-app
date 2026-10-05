@@ -213,6 +213,23 @@ export default function HomeScreen() {
             variant="secondary"
             onPress={() => router.push("/add-income" as Href)}
           />
+          <Pressable
+            onPress={() => router.push("/income-history" as Href)}
+            style={({ pressed }) => [
+              styles.incomeHistoryLink,
+              pressed && styles.incomeHistoryLinkPressed,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="View income history"
+          >
+            <Ionicons
+              name="trending-up-outline"
+              size={16}
+              color={Colors.primary}
+            />
+            <Text style={styles.seeAllText}>View Income History</Text>
+            <Ionicons name="chevron-forward" size={16} color={Colors.primary} />
+          </Pressable>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -388,5 +405,16 @@ const styles = StyleSheet.create({
   buttonWrapper: {
     marginTop: Spacing.sm,
     gap: Spacing.sm,
+  },
+  incomeHistoryLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 2,
+    paddingVertical: Spacing.xs,
+    marginTop: Spacing.xs,
+  },
+  incomeHistoryLinkPressed: {
+    opacity: 0.65,
   },
 });

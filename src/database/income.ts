@@ -59,6 +59,18 @@ export async function getAllIncome(
   return db.getAllAsync<Income>(query, ...params);
 }
 
+export async function getIncomeByDateRange(
+  db: SQLiteDatabase,
+  startDate: string,
+  endDate: string
+): Promise<Income[]> {
+  return db.getAllAsync<Income>(
+    "SELECT * FROM income WHERE income_date BETWEEN ? AND ? ORDER BY income_date DESC, income_time DESC, created_at DESC",
+    startDate,
+    endDate
+  );
+}
+
 export async function updateIncome(
   db: SQLiteDatabase,
   id: number,

@@ -66,6 +66,8 @@ function RootNavigator() {
       <Stack.Screen name="add-expense" options={{ presentation: "modal" }} />
       <Stack.Screen name="add-income" options={{ presentation: "modal" }} />
       <Stack.Screen name="expense-detail" options={{ presentation: "modal" }} />
+      <Stack.Screen name="income-history" options={{ presentation: "modal" }} />
+      <Stack.Screen name="income-detail" options={{ presentation: "modal" }} />
       <Stack.Screen name="onboarding" />
     </Stack>
   );

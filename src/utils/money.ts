@@ -29,6 +29,18 @@ export function parseNairaInput(text: string): number {
 }
 
 /**
+ * Parse a user-entered naira string, rejecting anything not fully numeric.
+ * Accepts plain decimals plus the ₦ symbol, thousands separators and
+ * surrounding whitespace. parseFloat alone would read "12abc34" as 12 and
+ * silently save the wrong amount, so the whole string must match.
+ */
+export function parseNairaAmount(text: string): number {
+  const cleaned = text.replace(/[₦\s,]/g, "");
+  if (!/^\d+(\.\d+)?$/.test(cleaned)) return NaN;
+  return parseFloat(cleaned);
+}
+
+/**
  * Format a kobo amount as a display string with ₦ and commas.
  * 250000 → "₦2,500"
  * 7550 → "₦75.50"
