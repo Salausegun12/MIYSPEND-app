@@ -1,6 +1,6 @@
 import { SQLiteDatabase } from "expo-sqlite";
 
-const CURRENT_DB_VERSION = 3;
+const CURRENT_DB_VERSION = 4;
 
 const MIGRATIONS: Record<number, (db: SQLiteDatabase) => Promise<void>> = {
   1: async (db) => {
@@ -94,6 +94,24 @@ const MIGRATIONS: Record<number, (db: SQLiteDatabase) => Promise<void>> = {
     // User profile stored in settings table (user_name, user_phone, user_email, onboarding_complete)
     // No schema changes needed - settings table already supports key-value pairs.
     // This migration ensures the DB version is bumped.
+  },
+  4: async (db) => {
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS income (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        amount INTEGER NOT NULL,
+        source TEXT NOT NULL DEFAULT 'Other',
+        payment_method TEXT NOT NULL DEFAULT '',
+        note TEXT NOT NULL DEFAULT '',
+        income_date TEXT NOT NULL DEFAULT (date('now')),
+        income_time TEXT NOT NULL DEFAULT (time('now')),
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_income_date ON income(income_date);
+      CREATE INDEX IF NOT EXISTS idx_income_date_source ON income(income_date, source);
+    `);
   },
 };
 
