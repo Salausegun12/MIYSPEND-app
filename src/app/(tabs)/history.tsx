@@ -12,12 +12,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSQLiteContext } from "expo-sqlite";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Card } from "../../components/ui/Card";
+import { AnimatedEntry } from "../../components/ui/AnimatedEntry";
 import { IconContainer } from "../../components/ui/IconContainer";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { Colors } from "../../constants/colors";
 import { Radius } from "../../constants/radius";
 import { Typography } from "../../constants/typography";
 import { Spacing } from "../../constants/spacing";
+import { Pressed } from "../../constants/motion";
 import {
   getExpensesByDateRange,
   getAllExpenses,
@@ -164,9 +166,11 @@ export default function HistoryScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>History</Text>
-      </View>
+      <AnimatedEntry delay={40}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>History</Text>
+        </View>
+      </AnimatedEntry>
 
       <View style={styles.filterBar}>
         <ScrollView
@@ -180,7 +184,14 @@ export default function HistoryScreen() {
               <Pressable
                 key={filter.key}
                 onPress={() => handleFilterChange(filter.key)}
-                style={[styles.filterChip, active && styles.filterChipActive]}
+                style={({ pressed }) => [
+                  styles.filterChip,
+                  active && styles.filterChipActive,
+                  pressed && styles.filterChipPressed,
+                ]}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
+                accessibilityLabel={`Filter expenses by ${filter.label}`}
               >
                 <Text
                   style={[
@@ -222,7 +233,12 @@ export default function HistoryScreen() {
                           `/expense-detail?id=${expense.id}` as Href
                         )
                       }
-                      style={styles.expenseRow}
+                       style={({ pressed }) => [
+                         styles.expenseRow,
+                         pressed && styles.expenseRowPressed,
+                       ]}
+                       accessibilityRole="button"
+                       accessibilityLabel={`View ${expense.description || expense.category_name} expense`}
                     >
                       <IconContainer
                         size={40}
@@ -325,6 +341,7 @@ const styles = StyleSheet.create({
     color: Colors.surface,
     fontWeight: "600",
   },
+  filterChipPressed: Pressed.default,
   scrollContent: {
     paddingHorizontal: Spacing.base,
     paddingBottom: Spacing.xxxl,
@@ -358,6 +375,7 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
     paddingVertical: Spacing.xs,
   },
+  expenseRowPressed: Pressed.default,
   expenseIcon: {
     fontSize: 18,
   },

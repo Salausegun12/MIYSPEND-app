@@ -21,6 +21,6 @@ const styles = StyleSheet.create({
     padding: Spacing.base,
     borderWidth: 1,
     borderColor: Colors.border,
-    ...Shadows.sm,
+    ...Shadows.md,
   },
 });

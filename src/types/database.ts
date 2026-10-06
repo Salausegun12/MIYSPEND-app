@@ -169,3 +169,82 @@ export interface GoalBalanceReconciliation {
   derived: number;
   corrected: boolean;
 }
+
+export type RecurringType = "income" | "expense";
+
+export type RecurringFrequency = "daily" | "weekly" | "monthly" | "yearly";
+
+export const RECURRING_FREQUENCIES: RecurringFrequency[] = [
+  "daily",
+  "weekly",
+  "monthly",
+  "yearly",
+];
+
+/**
+ * A user-configured income or expense that repeats on a schedule. Occurrences
+ * are generated locally (never from a bank/network) on app launch and screen
+ * focus. Each generated transaction is recorded exactly once in the
+ * `recurring_occurrences` ledger, so restarting or processing twice can never
+ * duplicate a transaction.
+ */
+export interface RecurringTransaction {
+  id: number;
+  type: RecurringType;
+  amount: number; // integer kobo
+  description: string;
+  /** Only used for expense recurring records. Null for income. */
+  category_id: number | null;
+  payment_method: string;
+  frequency: RecurringFrequency;
+  /** ISO YYYY-MM-DD of the next scheduled (first pending) occurrence. */
+  next_occurrence: string;
+  /**
+   * Calendar day used to keep monthly/yearly dates stable across short months.
+   * e.g. 31 keeps a 31st-of-month schedule on the last day of short months.
+   */
+  anchor_day: number;
+  /** ISO YYYY-MM-DD, or null when the schedule runs forever. */
+  end_date: string | null;
+  is_active: number; // 0 = paused, 1 = active
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RecurringTransactionWithCategory
+  extends RecurringTransaction {
+  category_name: string | null;
+  category_icon: string | null;
+  category_color: string | null;
+}
+
+export interface CreateRecurringInput {
+  type: RecurringType;
+  amount: number;
+  description: string;
+  category_id?: number | null;
+  payment_method?: string;
+  frequency: RecurringFrequency;
+  next_occurrence: string;
+  end_date?: string | null;
+}
+
+export interface UpdateRecurringInput {
+  type?: RecurringType;
+  amount?: number;
+  description?: string;
+  category_id?: number | null;
+  payment_method?: string;
+  frequency?: RecurringFrequency;
+  next_occurrence?: string;
+  end_date?: string | null;
+  is_active?: number;
+}
+
+export interface RecurringProcessSummary {
+  occurrencesProcessed: number;
+  incomeGenerated: number;
+  expensesGenerated: number;
+  recordsProcessed: number;
+  recordsDeactivated: number;
+}

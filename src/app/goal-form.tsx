@@ -24,6 +24,7 @@ import { Input } from "../components/ui/Input";
 import { Colors } from "../constants/colors";
 import { Radius } from "../constants/radius";
 import { Spacing } from "../constants/spacing";
+import { Pressed } from "../constants/motion";
 import { Typography } from "../constants/typography";
 import {
   createGoal,
@@ -168,7 +169,7 @@ export default function GoalFormScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.safe} edges={["top"]}>
+      <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
         <View style={styles.center}>
           <ActivityIndicator size="large" color={Colors.primary} />
         </View>
@@ -177,7 +178,7 @@ export default function GoalFormScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top"]}>
+    <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
       <View style={styles.header}>
         <Pressable
           onPress={() => router.back()}
@@ -421,7 +422,5 @@ const styles = StyleSheet.create({
     ...Typography.caption,
     color: Colors.textSecondary,
   },
-  pressed: {
-    opacity: 0.65,
-  },
+  pressed: Pressed.default,
 });

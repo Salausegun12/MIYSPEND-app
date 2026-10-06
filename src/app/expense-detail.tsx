@@ -17,12 +17,14 @@ import { useSQLiteContext } from "expo-sqlite";
 import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { Input } from "../components/ui/Input";
 import { Button } from "../components/ui/Button";
+import { AnimatedEntry } from "../components/ui/AnimatedEntry";
 import { Card } from "../components/ui/Card";
 import { Colors } from "../constants/colors";
 import { Radius } from "../constants/radius";
 import { Shadows } from "../constants/shadows";
 import { Typography } from "../constants/typography";
 import { Spacing } from "../constants/spacing";
+import { Pressed } from "../constants/motion";
 import {
   getExpenseById,
   updateExpense,
@@ -244,7 +246,7 @@ export default function ExpenseDetailScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.safe} edges={["top"]}>
+      <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={Colors.primary} />
         </View>
@@ -254,9 +256,15 @@ export default function ExpenseDetailScreen() {
 
   if (!expense) {
     return (
-      <SafeAreaView style={styles.safe} edges={["top"]}>
+      <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
         <View style={styles.header}>
-          <Pressable onPress={() => router.back()} style={styles.backButton}>
+          <Pressable
+            onPress={() => router.back()}
+            style={styles.backButton}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+            hitSlop={8}
+          >
             <Ionicons name="close" size={24} color={Colors.textPrimary} />
           </Pressable>
           <Text style={styles.headerTitle}>Expense</Text>
@@ -269,26 +277,41 @@ export default function ExpenseDetailScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top"]}>
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="close" size={24} color={Colors.textPrimary} />
-        </Pressable>
-        <Text style={styles.headerTitle}>Expense Details</Text>
-        <View style={styles.headerActions}>
-          {!editing && (
-            <Pressable
-              onPress={() => setEditing(true)}
-              style={styles.headerButton}
-            >
-              <Ionicons name="pencil-outline" size={20} color={Colors.primary} />
-            </Pressable>
-          )}
-          <Pressable onPress={handleDelete} style={styles.headerButton}>
-            <Ionicons name="trash-outline" size={20} color={Colors.error} />
+    <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
+      <AnimatedEntry delay={20}>
+        <View style={styles.header}>
+          <Pressable
+            onPress={() => router.back()}
+            style={styles.backButton}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+            hitSlop={8}
+          >
+            <Ionicons name="close" size={24} color={Colors.textPrimary} />
           </Pressable>
+          <Text style={styles.headerTitle}>Expense Details</Text>
+          <View style={styles.headerActions}>
+            {!editing && (
+              <Pressable
+                onPress={() => setEditing(true)}
+                style={styles.headerButton}
+                accessibilityRole="button"
+                accessibilityLabel="Edit expense"
+              >
+                <Ionicons name="pencil-outline" size={20} color={Colors.primary} />
+              </Pressable>
+            )}
+            <Pressable
+              onPress={handleDelete}
+              style={styles.headerButton}
+              accessibilityRole="button"
+              accessibilityLabel="Delete expense"
+            >
+              <Ionicons name="trash-outline" size={20} color={Colors.error} />
+            </Pressable>
+          </View>
         </View>
-      </View>
+      </AnimatedEntry>
 
       <ScrollView
         style={styles.flex}
@@ -298,48 +321,52 @@ export default function ExpenseDetailScreen() {
       >
         {!editing ? (
           <>
-            <LinearGradient
-              colors={Colors.gradient.primary}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.heroSection}
-            >
-              <View style={styles.heroIconChip}>
-                <Text style={styles.heroIcon}>{expense.category_icon}</Text>
-              </View>
-              <Text style={styles.heroAmount}>
-                {formatKoboAmount(expense.amount)}
-              </Text>
-              <Text style={styles.heroCategory}>
-                {expense.category_name}
-              </Text>
-            </LinearGradient>
+            <AnimatedEntry delay={40}>
+              <LinearGradient
+                colors={Colors.gradient.primary}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.heroSection}
+              >
+                <View style={styles.heroIconChip}>
+                  <Text style={styles.heroIcon}>{expense.category_icon}</Text>
+                </View>
+                <Text style={styles.heroAmount}>
+                  {formatKoboAmount(expense.amount)}
+                </Text>
+                <Text style={styles.heroCategory}>
+                  {expense.category_name}
+                </Text>
+              </LinearGradient>
+            </AnimatedEntry>
 
-            <Card style={styles.detailsCard}>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Description</Text>
-                <Text style={styles.detailValue}>{expense.description}</Text>
-              </View>
-              <View style={styles.detailDivider} />
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Payment Method</Text>
-                <Text style={styles.detailValue}>{expense.payment_method}</Text>
-              </View>
-              <View style={styles.detailDivider} />
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Date</Text>
-                <Text style={styles.detailValue}>{expense.date}</Text>
-              </View>
-              {expense.note ? (
-                <>
-                  <View style={styles.detailDivider} />
-                  <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Note</Text>
-                    <Text style={styles.detailValue}>{expense.note}</Text>
-                  </View>
-                </>
-              ) : null}
-            </Card>
+            <AnimatedEntry delay={100}>
+              <Card style={styles.detailsCard}>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Description</Text>
+                  <Text style={styles.detailValue}>{expense.description}</Text>
+                </View>
+                <View style={styles.detailDivider} />
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Payment Method</Text>
+                  <Text style={styles.detailValue}>{expense.payment_method}</Text>
+                </View>
+                <View style={styles.detailDivider} />
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Date</Text>
+                  <Text style={styles.detailValue}>{expense.date}</Text>
+                </View>
+                {expense.note ? (
+                  <>
+                    <View style={styles.detailDivider} />
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Note</Text>
+                      <Text style={styles.detailValue}>{expense.note}</Text>
+                    </View>
+                  </>
+                ) : null}
+              </Card>
+            </AnimatedEntry>
           </>
         ) : (
           <>
@@ -394,13 +421,16 @@ export default function ExpenseDetailScreen() {
                         setSelectedCategory(cat);
                         clearError("category");
                       }}
-                      style={[
+                      style={({ pressed }) => [
                         styles.chip,
                         active && {
                           borderColor: cat.color,
                           backgroundColor: cat.color + "15",
                         },
+                        pressed && styles.chipPressed,
                       ]}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: active }}
                     >
                       <Text style={styles.chipIcon}>{cat.icon}</Text>
                       <Text
@@ -436,7 +466,13 @@ export default function ExpenseDetailScreen() {
                         setSelectedPaymentMethod(m);
                         clearError("paymentMethod");
                       }}
-                      style={[styles.chip, active && styles.chipActive]}
+                      style={({ pressed }) => [
+                        styles.chip,
+                        active && styles.chipActive,
+                        pressed && styles.chipPressed,
+                      ]}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: active }}
                     >
                       <Text
                         style={[
@@ -455,7 +491,14 @@ export default function ExpenseDetailScreen() {
             <View style={styles.row}>
               <View style={styles.half}>
                 <Text style={styles.label}>Date</Text>
-                <Pressable onPress={() => setShowDatePicker(true)}>
+                <Pressable
+                  onPress={() => setShowDatePicker(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Choose date, ${formatDisplayDate(editDate)}`}
+                  style={({ pressed }) => [
+                    pressed && styles.datePickerPressed,
+                  ]}
+                >
                   <Card style={styles.dateCard}>
                     <View style={styles.dateRow}>
                       <Ionicons name="calendar-outline" size={18} color={Colors.primary} />
@@ -466,7 +509,14 @@ export default function ExpenseDetailScreen() {
               </View>
               <View style={styles.half}>
                 <Text style={styles.label}>Time</Text>
-                <Pressable onPress={() => setShowTimePicker(true)}>
+                <Pressable
+                  onPress={() => setShowTimePicker(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Choose time, ${formatDisplayTime(editTime)}`}
+                  style={({ pressed }) => [
+                    pressed && styles.datePickerPressed,
+                  ]}
+                >
                   <Card style={styles.dateCard}>
                     <View style={styles.dateRow}>
                       <Ionicons name="time-outline" size={18} color={Colors.primary} />
@@ -497,13 +547,23 @@ export default function ExpenseDetailScreen() {
             )}
 
             {Platform.OS === "ios" && showDatePicker && (
-              <Pressable onPress={() => setShowDatePicker(false)} style={styles.pickerDone}>
+              <Pressable
+                onPress={() => setShowDatePicker(false)}
+                style={styles.pickerDone}
+                accessibilityRole="button"
+                accessibilityLabel="Done"
+              >
                 <Text style={styles.pickerDoneText}>Done</Text>
               </Pressable>
             )}
 
             {Platform.OS === "ios" && showTimePicker && (
-              <Pressable onPress={() => setShowTimePicker(false)} style={styles.pickerDone}>
+              <Pressable
+                onPress={() => setShowTimePicker(false)}
+                style={styles.pickerDone}
+                accessibilityRole="button"
+                accessibilityLabel="Done"
+              >
                 <Text style={styles.pickerDoneText}>Done</Text>
               </Pressable>
             )}
@@ -685,6 +745,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.primary,
     backgroundColor: Colors.primarySoft,
   },
+  chipPressed: Pressed.default,
   chipIcon: {
     fontSize: 16,
   },
@@ -712,6 +773,7 @@ const styles = StyleSheet.create({
   dateCard: {
     padding: Spacing.sm,
   },
+  datePickerPressed: Pressed.subtle,
   dateRow: {
     flexDirection: "row",
     alignItems: "center",

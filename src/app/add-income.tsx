@@ -15,7 +15,6 @@ import DateTimePicker, {
 } from "@react-native-community/datetimepicker";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import type { ComponentProps } from "react";
 import { useSQLiteContext } from "expo-sqlite";
 import { Input } from "../components/ui/Input";
 import { Button } from "../components/ui/Button";
@@ -25,41 +24,19 @@ import { Colors } from "../constants/colors";
 import { Radius } from "../constants/radius";
 import { Typography } from "../constants/typography";
 import { Spacing } from "../constants/spacing";
+import { Pressed } from "../constants/motion";
+import { INCOME_SOURCE_ICONS } from "../constants/income";
 import { addIncome } from "../database/income";
 import { getTodayString } from "../utils/date";
-import { nairaToKobo } from "../utils/money";
+import { nairaToKobo, parseNairaAmount } from "../utils/money";
 import type { IncomeSource, PaymentMethod } from "../types/database";
 import { INCOME_SOURCES, PAYMENT_METHODS } from "../types/database";
-
-type IoniconName = ComponentProps<typeof Ionicons>["name"];
-
-const INCOME_SOURCE_ICONS: Record<IncomeSource, IoniconName> = {
-  Salary: "briefcase-outline",
-  Freelance: "laptop-outline",
-  Business: "storefront-outline",
-  Allowance: "wallet-outline",
-  Commission: "trending-up-outline",
-  Gift: "gift-outline",
-  Refund: "return-down-back-outline",
-  Other: "ellipsis-horizontal-outline",
-};
 
 function getNowTimeString(): string {
   const d = new Date();
   const h = String(d.getHours()).padStart(2, "0");
   const min = String(d.getMinutes()).padStart(2, "0");
   return `${h}:${min}`;
-}
-
-// Accepts plain decimals plus the ₦ symbol, thousands separators and
-// surrounding whitespace, but rejects anything that is not fully numeric.
-// parseFloat alone would read "12abc34" as 12 and silently save the wrong amount.
-const AMOUNT_PATTERN = /^\d+(\.\d+)?$/;
-
-function parseAmountInput(text: string): number {
-  const cleaned = text.replace(/[₦\s,]/g, "");
-  if (!AMOUNT_PATTERN.test(cleaned)) return NaN;
-  return parseFloat(cleaned);
 }
 
 function dateStringToDate(dateStr: string): Date {
@@ -157,7 +134,7 @@ export default function AddIncomeScreen() {
   function validate(): boolean {
     const next: typeof errors = {};
 
-    const parsed = parseAmountInput(amount);
+    const parsed = parseNairaAmount(amount);
     if (!amount.trim() || isNaN(parsed) || parsed <= 0 || nairaToKobo(parsed) <= 0) {
       next.amount = "Enter a valid amount";
     }
@@ -179,7 +156,7 @@ export default function AddIncomeScreen() {
     savingRef.current = true;
     setLoading(true);
     try {
-      const parsed = parseAmountInput(amount);
+      const parsed = parseNairaAmount(amount);
       const amountKobo = nairaToKobo(parsed);
 
       await addIncome(db, {
@@ -204,7 +181,7 @@ export default function AddIncomeScreen() {
   }, [db, router, amount, selectedSource, selectedPaymentMethod, note, date, time]);
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top"]}>
+    <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -520,10 +497,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.primary,
     backgroundColor: Colors.primarySoft,
   },
-  chipPressed: {
-    opacity: 0.78,
-    transform: [{ scale: 0.98 }],
-  },
+  chipPressed: Pressed.default,
   chipLabel: {
     ...Typography.bodySmall,
     color: Colors.textSecondary,
@@ -543,10 +517,7 @@ const styles = StyleSheet.create({
   dateCard: {
     padding: Spacing.sm,
   },
-  datePickerPressed: {
-    opacity: 0.72,
-    transform: [{ scale: 0.99 }],
-  },
+  datePickerPressed: Pressed.subtle,
   dateRow: {
     flexDirection: "row",
     alignItems: "center",

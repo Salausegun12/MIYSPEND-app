@@ -24,6 +24,7 @@ import { Radius } from "../constants/radius";
 import { Shadows } from "../constants/shadows";
 import { Typography } from "../constants/typography";
 import { Spacing } from "../constants/spacing";
+import { Pressed } from "../constants/motion";
 import { INCOME_SOURCE_COLORS, INCOME_SOURCE_ICONS } from "../constants/income";
 import {
   getIncomeById,
@@ -254,7 +255,7 @@ export default function IncomeDetailScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.safe} edges={["top"]}>
+      <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={Colors.primary} />
         </View>
@@ -264,7 +265,7 @@ export default function IncomeDetailScreen() {
 
   if (!income) {
     return (
-      <SafeAreaView style={styles.safe} edges={["top"]}>
+      <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
         <View style={styles.header}>
           <Pressable
             onPress={() => router.back()}
@@ -287,7 +288,7 @@ export default function IncomeDetailScreen() {
   const source = income.source as IncomeSource;
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top"]}>
+    <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
       <AnimatedEntry delay={20}>
         <View style={styles.header}>
           <Pressable
@@ -754,10 +755,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.primary,
     backgroundColor: Colors.primarySoft,
   },
-  chipPressed: {
-    opacity: 0.78,
-    transform: [{ scale: 0.98 }],
-  },
+  chipPressed: Pressed.default,
   chipLabel: {
     ...Typography.bodySmall,
     color: Colors.textSecondary,
@@ -782,10 +780,7 @@ const styles = StyleSheet.create({
   dateCard: {
     padding: Spacing.sm,
   },
-  datePickerPressed: {
-    opacity: 0.72,
-    transform: [{ scale: 0.99 }],
-  },
+  datePickerPressed: Pressed.subtle,
   dateRow: {
     flexDirection: "row",
     alignItems: "center",

@@ -18,11 +18,13 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSQLiteContext } from "expo-sqlite";
 import { Input } from "../components/ui/Input";
 import { Button } from "../components/ui/Button";
+import { AnimatedEntry } from "../components/ui/AnimatedEntry";
 import { Card } from "../components/ui/Card";
 import { Colors } from "../constants/colors";
 import { Radius } from "../constants/radius";
 import { Typography } from "../constants/typography";
 import { Spacing } from "../constants/spacing";
+import { Pressed } from "../constants/motion";
 import { addExpense } from "../database/expenses";
 import { getAllCategories } from "../database/categories";
 import { nairaToKobo, parseNairaInput } from "../utils/money";
@@ -209,21 +211,24 @@ export default function AddExpenseScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top"]}>
+    <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <View style={styles.header}>
-          <Pressable
-            onPress={() => router.back()}
-            style={styles.backButton}
-            accessibilityLabel="Go back"
-          >
-            <Ionicons name="close" size={24} color={Colors.textPrimary} />
-          </Pressable>
-          <Text style={styles.headerTitle}>Add Expense</Text>
-        </View>
+        <AnimatedEntry delay={40}>
+          <View style={styles.header}>
+            <Pressable
+              onPress={() => router.back()}
+              style={styles.backButton}
+              accessibilityLabel="Go back"
+              hitSlop={8}
+            >
+              <Ionicons name="close" size={24} color={Colors.textPrimary} />
+            </Pressable>
+            <Text style={styles.headerTitle}>Add Expense</Text>
+          </View>
+        </AnimatedEntry>
 
         <ScrollView
           style={styles.flex}
@@ -282,13 +287,16 @@ export default function AddExpenseScreen() {
                       setSelectedCategory(cat);
                       clearError("category");
                     }}
-                    style={[
+                    style={({ pressed }) => [
                       styles.chip,
                       active && {
                         borderColor: cat.color,
                         backgroundColor: cat.color + "15",
                       },
+                      pressed && styles.chipPressed,
                     ]}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active }}
                   >
                     <Text style={styles.chipIcon}>{cat.icon}</Text>
                     <Text
@@ -324,7 +332,13 @@ export default function AddExpenseScreen() {
                       setSelectedPaymentMethod(m);
                       clearError("paymentMethod");
                     }}
-                    style={[styles.chip, active && styles.chipActive]}
+                    style={({ pressed }) => [
+                      styles.chip,
+                      active && styles.chipActive,
+                      pressed && styles.chipPressed,
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active }}
                   >
                     <Text
                       style={[
@@ -343,7 +357,14 @@ export default function AddExpenseScreen() {
           <View style={styles.row}>
             <View style={styles.half}>
               <Text style={styles.label}>Date</Text>
-              <Pressable onPress={() => setShowDatePicker(true)}>
+              <Pressable
+                onPress={() => setShowDatePicker(true)}
+                accessibilityRole="button"
+                accessibilityLabel={`Choose date, ${formatDisplayDate(date)}`}
+                style={({ pressed }) => [
+                  pressed && styles.datePickerPressed,
+                ]}
+              >
                 <Card style={styles.dateCard}>
                   <View style={styles.dateRow}>
                     <Ionicons
@@ -360,7 +381,14 @@ export default function AddExpenseScreen() {
             </View>
             <View style={styles.half}>
               <Text style={styles.label}>Time</Text>
-              <Pressable onPress={() => setShowTimePicker(true)}>
+              <Pressable
+                onPress={() => setShowTimePicker(true)}
+                accessibilityRole="button"
+                accessibilityLabel={`Choose time, ${formatDisplayTime(time)}`}
+                style={({ pressed }) => [
+                  pressed && styles.datePickerPressed,
+                ]}
+              >
                 <Card style={styles.dateCard}>
                   <View style={styles.dateRow}>
                     <Ionicons
@@ -400,6 +428,7 @@ export default function AddExpenseScreen() {
             <Pressable
               onPress={() => setShowDatePicker(false)}
               style={styles.pickerDone}
+              accessibilityRole="button"
             >
               <Text style={styles.pickerDoneText}>Done</Text>
             </Pressable>
@@ -409,6 +438,7 @@ export default function AddExpenseScreen() {
             <Pressable
               onPress={() => setShowTimePicker(false)}
               style={styles.pickerDone}
+              accessibilityRole="button"
             >
               <Text style={styles.pickerDoneText}>Done</Text>
             </Pressable>
@@ -426,14 +456,16 @@ export default function AddExpenseScreen() {
             />
           </View>
 
-          <View style={styles.footer}>
-            <Button
-              title="Save Expense"
-              onPress={handleSave}
-              loading={loading}
-              disabled={loading}
-            />
-          </View>
+          <AnimatedEntry delay={160}>
+            <View style={styles.footer}>
+              <Button
+                title="Save Expense"
+                onPress={handleSave}
+                loading={loading}
+                disabled={loading}
+              />
+            </View>
+          </AnimatedEntry>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -507,6 +539,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.primary,
     backgroundColor: Colors.primarySoft,
   },
+  chipPressed: Pressed.default,
   chipIcon: {
     fontSize: 16,
   },
@@ -529,6 +562,7 @@ const styles = StyleSheet.create({
   dateCard: {
     padding: Spacing.sm,
   },
+  datePickerPressed: Pressed.subtle,
   dateRow: {
     flexDirection: "row",
     alignItems: "center",

@@ -20,6 +20,8 @@ import { Card } from "../components/ui/Card";
 import { Input } from "../components/ui/Input";
 import { Colors } from "../constants/colors";
 import { Spacing } from "../constants/spacing";
+import { Pressed } from "../constants/motion";
+import { Radius } from "../constants/radius";
 import { Typography } from "../constants/typography";
 import {
   addBudget,
@@ -189,7 +191,7 @@ export default function BudgetFormScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.safe} edges={["top"]}>
+      <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
         {renderHeader(isEditing ? "Edit Budget" : "New Budget")}
         <View style={styles.center}>
           <ActivityIndicator size="large" color={Colors.primary} />
@@ -200,7 +202,7 @@ export default function BudgetFormScreen() {
 
   if (isEditing && !budget) {
     return (
-      <SafeAreaView style={styles.safe} edges={["top"]}>
+      <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
         {renderHeader("Edit Budget")}
         <View style={styles.center}>
           <Text style={styles.missingText}>
@@ -214,7 +216,7 @@ export default function BudgetFormScreen() {
   const progress = budget ? calculateBudgetProgress(budget) : null;
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top"]}>
+    <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -414,14 +416,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: Spacing.base,
     paddingVertical: Spacing.sm,
-    borderRadius: 20,
+    borderRadius: Radius.xl,
     borderWidth: 1,
     borderColor: Colors.border,
     backgroundColor: Colors.surface,
   },
-  chipPressed: {
-    opacity: 0.65,
-  },
+  chipPressed: Pressed.default,
   chipIcon: {
     fontSize: 16,
     marginRight: Spacing.xs,

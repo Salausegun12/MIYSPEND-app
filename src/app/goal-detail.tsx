@@ -26,6 +26,7 @@ import { EmptyState } from "../components/ui/EmptyState";
 import { Colors } from "../constants/colors";
 import { Radius } from "../constants/radius";
 import { Spacing } from "../constants/spacing";
+import { Pressed } from "../constants/motion";
 import { Typography } from "../constants/typography";
 import {
   createContribution,
@@ -155,7 +156,7 @@ export default function GoalDetailScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.safe} edges={["top"]}>
+      <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
         <View style={styles.loading}>
           <ActivityIndicator size="large" color={Colors.primary} />
         </View>
@@ -165,7 +166,7 @@ export default function GoalDetailScreen() {
 
   if (!goal) {
     return (
-      <SafeAreaView style={styles.safe} edges={["top"]}>
+      <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
         <View style={styles.header}>
           <Pressable
             onPress={() => router.back()}
@@ -196,7 +197,7 @@ export default function GoalDetailScreen() {
   const fraction = Math.min(percent, 100) / 100;
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top"]}>
+    <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
       <View style={styles.header}>
         <Pressable
           onPress={() => router.back()}
@@ -415,9 +416,7 @@ const styles = StyleSheet.create({
   editButton: {
     padding: Spacing.xs,
   },
-  pressed: {
-    opacity: 0.65,
-  },
+  pressed: Pressed.default,
   loading: {
     flex: 1,
     alignItems: "center",

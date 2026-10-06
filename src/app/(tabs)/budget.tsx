@@ -12,29 +12,30 @@ import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter, Href } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { AnimatedEntry } from "../components/ui/AnimatedEntry";
-import { Button } from "../components/ui/Button";
-import { Card } from "../components/ui/Card";
-import { EmptyState } from "../components/ui/EmptyState";
-import { Colors } from "../constants/colors";
-import { Radius } from "../constants/radius";
-import { Spacing } from "../constants/spacing";
-import { Typography } from "../constants/typography";
+import { AnimatedEntry } from "../../components/ui/AnimatedEntry";
+import { Button } from "../../components/ui/Button";
+import { Card } from "../../components/ui/Card";
+import { EmptyState } from "../../components/ui/EmptyState";
+import { Colors } from "../../constants/colors";
+import { Radius } from "../../constants/radius";
+import { Spacing } from "../../constants/spacing";
+import { Pressed } from "../../constants/motion";
+import { Typography } from "../../constants/typography";
 import {
   deleteBudget,
   getBudgetsWithSpending,
   getCurrentBudgetPeriod,
-} from "../database/budget";
-import { getMonthEnd, getMonthStart } from "../utils/date";
-import { formatKoboAmount } from "../utils/money";
+} from "../../database/budget";
+import { getMonthEnd, getMonthStart } from "../../utils/date";
+import { formatKoboAmount } from "../../utils/money";
 import {
   BudgetProgress,
   calculateBudgetProgress,
   getBudgetProgressFraction,
   getBudgetRemainingText,
   getBudgetStatusLabel,
-} from "../utils/budget";
-import type { BudgetStatus } from "../types/database";
+} from "../../utils/budget";
+import type { BudgetStatus } from "../../types/database";
 
 const STATUS_COLORS: Record<BudgetStatus, string> = {
   normal: Colors.success,
@@ -185,14 +186,6 @@ export default function BudgetScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
       <View style={styles.header}>
-        <Pressable
-          onPress={() => router.back()}
-          style={styles.closeButton}
-          accessibilityLabel="Go back"
-          hitSlop={8}
-        >
-          <Ionicons name="close" size={24} color={Colors.textPrimary} />
-        </Pressable>
         <Text style={styles.headerTitle}>Budgets</Text>
       </View>
 
@@ -286,13 +279,9 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.base,
   },
-  closeButton: {
-    padding: Spacing.xs,
-  },
   headerTitle: {
     ...Typography.h3,
     color: Colors.textPrimary,
-    marginLeft: Spacing.md,
   },
   loading: {
     flex: 1,
@@ -304,9 +293,7 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.xl,
     gap: Spacing.base,
   },
-  pressed: {
-    opacity: 0.65,
-  },
+  pressed: Pressed.default,
   cardTop: {
     gap: Spacing.sm,
   },

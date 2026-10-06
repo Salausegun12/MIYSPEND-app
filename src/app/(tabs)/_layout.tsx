@@ -1,8 +1,14 @@
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Colors } from "../../constants/colors";
+import { Shadows } from "../../constants/shadows";
+
+const TAB_BAR_HEIGHT = 64;
 
 export default function TabsLayout() {
+  const insets = useSafeAreaInsets();
+
   return (
     <Tabs
       screenOptions={{
@@ -13,10 +19,12 @@ export default function TabsLayout() {
           backgroundColor: Colors.surface,
           borderTopColor: Colors.border,
           borderTopWidth: 1,
-          height: 64,
-          paddingBottom: 10,
+          height: TAB_BAR_HEIGHT + insets.bottom,
+          paddingBottom: 10 + insets.bottom,
           paddingTop: 8,
+          ...Shadows.md,
         },
+        tabBarHideOnKeyboard: true,
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: "600",
@@ -30,6 +38,32 @@ export default function TabsLayout() {
           tabBarIcon: ({ color, size, focused }) => (
             <Ionicons
               name={focused ? "home" : "home-outline"}
+              size={size}
+              color={color}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="budget"
+        options={{
+          title: "Budget",
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons
+              name={focused ? "pie-chart" : "pie-chart-outline"}
+              size={size}
+              color={color}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="goals"
+        options={{
+          title: "Goals",
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons
+              name={focused ? "flag" : "flag-outline"}
               size={size}
               color={color}
             />

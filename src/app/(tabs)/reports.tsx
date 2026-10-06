@@ -21,6 +21,7 @@ import { Radius } from "../../constants/radius";
 import { Shadows } from "../../constants/shadows";
 import { Typography } from "../../constants/typography";
 import { Spacing } from "../../constants/spacing";
+import { Pressed } from "../../constants/motion";
 import {
   getTodayString,
   getWeekStart,
@@ -1090,10 +1091,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.primary,
     backgroundColor: Colors.primarySoft,
   },
-  periodChipPressed: {
-    opacity: 0.78,
-    transform: [{ scale: 0.98 }],
-  },
+  periodChipPressed: Pressed.default,
   periodChipLabel: {
     ...Typography.caption,
     color: Colors.textPrimary,

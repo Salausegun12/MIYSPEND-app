@@ -18,6 +18,7 @@ import { Button } from "../../components/ui/Button";
 import { Colors } from "../../constants/colors";
 import { Typography } from "../../constants/typography";
 import { Spacing } from "../../constants/spacing";
+import { AnimatedEntry } from "../../components/ui/AnimatedEntry";
 import { saveUserProfile } from "../../utils/user";
 
 export default function OnboardingSignUpScreen() {
@@ -77,7 +78,7 @@ export default function OnboardingSignUpScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.header}>
+          <AnimatedEntry style={styles.header} delay={40}>
             <LinearGradient
               colors={Colors.gradient.primary}
               start={{ x: 0, y: 0 }}
@@ -91,9 +92,9 @@ export default function OnboardingSignUpScreen() {
               Tell us a bit about yourself so we can personalize your
               experience. This stays on your device.
             </Text>
-          </View>
+          </AnimatedEntry>
 
-          <View style={styles.form}>
+          <AnimatedEntry style={styles.form} delay={120}>
             <Input
               label="Full Name"
               placeholder="e.g. Segun"
@@ -128,16 +129,16 @@ export default function OnboardingSignUpScreen() {
               keyboardType="email-address"
               autoCapitalize="none"
             />
-          </View>
+          </AnimatedEntry>
 
-          <View style={styles.footer}>
+          <AnimatedEntry style={styles.footer} delay={200}>
             <Button
               title="Get Started"
               onPress={handleGetStarted}
               loading={loading}
               disabled={loading}
             />
-          </View>
+          </AnimatedEntry>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

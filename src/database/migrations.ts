@@ -1,6 +1,7 @@
 import { SQLiteDatabase } from "expo-sqlite";
+import { RECURRING_SCHEMA_SQL } from "./recurring";
 
-const CURRENT_DB_VERSION = 6;
+const CURRENT_DB_VERSION = 7;
 
 const MIGRATIONS: Record<number, (db: SQLiteDatabase) => Promise<void>> = {
   1: async (db) => {
@@ -166,6 +167,9 @@ const MIGRATIONS: Record<number, (db: SQLiteDatabase) => Promise<void>> = {
       CREATE INDEX IF NOT EXISTS idx_contributions_date
         ON contributions(date);
     `);
+  },
+  7: async (db) => {
+    await db.execAsync(RECURRING_SCHEMA_SQL);
   },
 };
 

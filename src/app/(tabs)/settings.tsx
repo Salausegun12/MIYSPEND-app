@@ -18,20 +18,14 @@ import DateTimePicker, {
   DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
 import { Card } from "../../components/ui/Card";
+import { AnimatedEntry } from "../../components/ui/AnimatedEntry";
 import { Colors } from "../../constants/colors";
 import { Radius } from "../../constants/radius";
 import { Shadows } from "../../constants/shadows";
 import { Typography } from "../../constants/typography";
 import { Spacing } from "../../constants/spacing";
+import { Pressed } from "../../constants/motion";
 import { getSetting, setSetting } from "../../database/settings";
-import {
-  getBudgetsWithSpending,
-  getCurrentBudgetPeriod,
-} from "../../database/budget";
-import { getMonthEnd, getMonthStart } from "../../utils/date";
-import { getGoalsWithBalances } from "../../database/savingsGoals";
-import { calculateBudgetProgress } from "../../utils/budget";
-import { formatKoboAmount } from "../../utils/money";
 import {
   requestNotificationPermission,
   getNotificationPermissionStatus,
@@ -73,8 +67,6 @@ export default function SettingsScreen() {
   const [permissionDenied, setPermissionDenied] = useState(false);
   const [notificationsAvailable, setNotificationsAvailable] = useState(true);
   const [loading, setLoading] = useState(true);
-  const [budgetSummary, setBudgetSummary] = useState<string | null>(null);
-  const [goalsSummary, setGoalsSummary] = useState<string | null>(null);
 
   const loadSettings = useCallback(async () => {
     try {
@@ -84,36 +76,6 @@ export default function SettingsScreen() {
       ]);
       setReminderEnabled(enabled === "true");
       setReminderTime(time ?? DEFAULT_TIME);
-
-      const budgets = await getBudgetsWithSpending(
-        db,
-        getCurrentBudgetPeriod(getMonthStart(), getMonthEnd())
-      );
-      if (budgets.length === 0) {
-        setBudgetSummary("Set a monthly limit on a category");
-      } else {
-        const over = budgets.filter(
-          (b) => calculateBudgetProgress(b).status === "over"
-        ).length;
-        const count = budgets.length;
-        const plural = count === 1 ? "budget" : "budgets";
-        setBudgetSummary(
-          over > 0
-            ? `${count} ${plural} · ${over} over limit`
-            : `${count} ${plural} set`
-        );
-      }
-
-      const goals = await getGoalsWithBalances(db);
-      if (goals.length === 0) {
-        setGoalsSummary("Track what you are saving for");
-      } else {
-        const saved = goals.reduce((sum, g) => sum + g.balance, 0);
-        const count = goals.length;
-        setGoalsSummary(
-          `${count} ${count === 1 ? "goal" : "goals"} · ${formatKoboAmount(saved)} saved`
-        );
-      }
 
       const status = await getNotificationPermissionStatus();
       if (status === "unsupported") {
@@ -207,32 +169,36 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Settings</Text>
-      </View>
+      <AnimatedEntry delay={20}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Settings</Text>
+        </View>
+      </AnimatedEntry>
 
       <ScrollView
         style={styles.flex}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <LinearGradient
-          colors={Colors.gradient.soft}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.brandCard}
-        >
+        <AnimatedEntry delay={40}>
           <LinearGradient
-            colors={Colors.gradient.primary}
+            colors={Colors.gradient.soft}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            style={styles.brandIcon}
+            style={styles.brandCard}
           >
-            <Ionicons name="wallet" size={32} color={Colors.surface} />
+            <LinearGradient
+              colors={Colors.gradient.primary}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.brandIcon}
+            >
+              <Ionicons name="wallet" size={32} color={Colors.surface} />
+            </LinearGradient>
+            <Text style={styles.brandName}>MiySpend</Text>
+            <Text style={styles.brandTagline}>Track your spending wisely</Text>
           </LinearGradient>
-          <Text style={styles.brandName}>MiySpend</Text>
-          <Text style={styles.brandTagline}>Track your spending wisely</Text>
-        </LinearGradient>
+        </AnimatedEntry>
 
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Reminders</Text>
@@ -257,6 +223,13 @@ export default function SettingsScreen() {
                 disabled={!notificationsAvailable}
                 trackColor={{ false: Colors.disabled, true: Colors.primaryLight }}
                 thumbColor={reminderEnabled ? Colors.surface : Colors.surface}
+                accessibilityRole="switch"
+                accessibilityLabel="Daily reminder"
+                accessibilityHint="Choose whether to receive a daily reminder to log expenses"
+                accessibilityState={{
+                  checked: reminderEnabled,
+                  disabled: !notificationsAvailable,
+                }}
               />
             </View>
 
@@ -282,7 +255,12 @@ export default function SettingsScreen() {
                 <View style={styles.settingDivider} />
                 <Pressable
                   onPress={() => setShowTimePicker(true)}
-                  style={styles.settingRow}
+                  style={({ pressed }) => [
+                    styles.settingRow,
+                    pressed && styles.settingRowPressed,
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Reminder time, ${formatDisplayTime(reminderTime)}`}
                 >
                   <View style={styles.settingInfo}>
                     <Ionicons
@@ -325,65 +303,27 @@ export default function SettingsScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Budgets</Text>
+          <Text style={styles.sectionLabel}>Automation</Text>
           <Card style={styles.card}>
             <Pressable
-              onPress={() => router.push("/budget" as Href)}
+              onPress={() => router.push("/recurring" as Href)}
               style={({ pressed }) => [
                 styles.settingRow,
                 pressed && styles.settingRowPressed,
               ]}
               accessibilityRole="button"
-              accessibilityLabel="Budgets, set monthly limits per category"
+              accessibilityLabel="Recurring transactions"
             >
               <View style={styles.settingInfo}>
                 <Ionicons
-                  name="pie-chart-outline"
+                  name="repeat"
                   size={22}
                   color={Colors.primary}
                 />
                 <View style={styles.settingText}>
-                  <Text style={styles.settingTitle}>Budgets</Text>
+                  <Text style={styles.settingTitle}>Recurring Transactions</Text>
                   <Text style={styles.settingDesc}>
-                    {budgetSummary === null
-                      ? "Set a monthly limit on a category"
-                      : budgetSummary}
-                  </Text>
-                </View>
-              </View>
-              <Ionicons
-                name="chevron-forward"
-                size={20}
-                color={Colors.textSecondary}
-              />
-            </Pressable>
-          </Card>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Savings</Text>
-          <Card style={styles.card}>
-            <Pressable
-              onPress={() => router.push("/goals" as Href)}
-              style={({ pressed }) => [
-                styles.settingRow,
-                pressed && styles.settingRowPressed,
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel="Savings goals, track what you are saving for"
-            >
-              <View style={styles.settingInfo}>
-                <Ionicons
-                  name="flag-outline"
-                  size={22}
-                  color={Colors.primary}
-                />
-                <View style={styles.settingText}>
-                  <Text style={styles.settingTitle}>Savings Goals</Text>
-                  <Text style={styles.settingDesc}>
-                    {goalsSummary === null
-                      ? "Track what you are saving for"
-                      : goalsSummary}
+                    Automate income and repeating bills
                   </Text>
                 </View>
               </View>
@@ -409,6 +349,8 @@ export default function SettingsScreen() {
           <Pressable
             onPress={() => setShowTimePicker(false)}
             style={styles.pickerDone}
+            accessibilityRole="button"
+            accessibilityLabel="Done"
           >
             <Text style={styles.pickerDoneText}>Done</Text>
           </Pressable>
@@ -527,9 +469,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingVertical: Spacing.xs,
   },
-  settingRowPressed: {
-    opacity: 0.65,
-  },
+  settingRowPressed: Pressed.default,
   settingInfo: {
     flexDirection: "row",
     alignItems: "center",

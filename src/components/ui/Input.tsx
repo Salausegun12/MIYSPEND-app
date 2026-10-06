@@ -17,7 +17,14 @@ interface InputProps extends TextInputProps {
   error?: string;
 }
 
-export function Input({ label, error, style, ...props }: InputProps) {
+export function Input({
+  label,
+  error,
+  style,
+  onFocus,
+  onBlur,
+  ...props
+}: InputProps) {
   const [focused, setFocused] = useState(false);
 
   return (
@@ -32,8 +39,16 @@ export function Input({ label, error, style, ...props }: InputProps) {
           style,
         ]}
         placeholderTextColor={Colors.textSecondary}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
+        selectionColor={Colors.primary}
+        accessibilityLabel={props.accessibilityLabel ?? label}
+        onFocus={(event) => {
+          setFocused(true);
+          onFocus?.(event);
+        }}
+        onBlur={(event) => {
+          setFocused(false);
+          onBlur?.(event);
+        }}
         {...props}
       />
       {error && <Text style={styles.errorText}>{error}</Text>}

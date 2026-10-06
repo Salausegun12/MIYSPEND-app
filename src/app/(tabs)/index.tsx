@@ -18,12 +18,14 @@ import { IconContainer } from "../../components/ui/IconContainer";
 import { Colors } from "../../constants/colors";
 import { Typography } from "../../constants/typography";
 import { Spacing } from "../../constants/spacing";
+import { Pressed } from "../../constants/motion";
 import {
   getTotalExpenses,
   getAllExpenses,
   getTodayExpenseCount,
 } from "../../database/expenses";
 import { getTotalIncome, getAllIncome } from "../../database/income";
+import { processDueRecurringTransactions } from "../../database/recurring";
 import {
   getTodayString,
   getWeekStart,
@@ -109,6 +111,9 @@ export default function HomeScreen() {
       const weekEnd = getWeekEnd();
       const monthStart = getMonthStart();
       const monthEnd = getMonthEnd();
+
+      // Record any recurring income/expenses that came due since last focus.
+      await processDueRecurringTransactions(db);
 
       const [
         todaysIncome,
@@ -381,6 +386,19 @@ export default function HomeScreen() {
             onPress={() => router.push("/add-income" as Href)}
           />
           <Pressable
+            onPress={() => router.push("/recurring" as Href)}
+            style={({ pressed }) => [
+              styles.incomeHistoryLink,
+              pressed && styles.seeAllPressed,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Manage recurring transactions"
+          >
+            <Ionicons name="repeat-outline" size={16} color={Colors.primary} />
+            <Text style={styles.seeAllText}>Manage Recurring Transactions</Text>
+            <Ionicons name="chevron-forward" size={16} color={Colors.primary} />
+          </Pressable>
+          <Pressable
             onPress={() => router.push("/income-history" as Href)}
             style={({ pressed }) => [
               styles.incomeHistoryLink,
@@ -509,9 +527,7 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     fontWeight: "600",
   },
-  seeAllPressed: {
-    opacity: 0.65,
-  },
+  seeAllPressed: Pressed.default,
   sectionTitle: {
     ...Typography.h3,
     color: Colors.textPrimary,
@@ -525,9 +541,7 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
     paddingVertical: Spacing.xs,
   },
-  expenseRowPressed: {
-    opacity: 0.65,
-  },
+  expenseRowPressed: Pressed.default,
   expenseIcon: {
     fontSize: 18,
   },

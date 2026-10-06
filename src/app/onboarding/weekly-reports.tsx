@@ -13,6 +13,7 @@ import { Colors } from "../../constants/colors";
 import { Radius } from "../../constants/radius";
 import { Typography } from "../../constants/typography";
 import { Spacing } from "../../constants/spacing";
+import { AnimatedEntry } from "../../components/ui/AnimatedEntry";
 
 export default function OnboardingWeeklyReportsScreen() {
   const router = useRouter();
@@ -20,7 +21,7 @@ export default function OnboardingWeeklyReportsScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
-        <View style={styles.illustration}>
+        <AnimatedEntry style={styles.illustration} delay={40}>
           <View style={styles.illustBg}>
             <View style={styles.illustCircle}>
               <Ionicons name="calendar" size={60} color={Colors.primary} />
@@ -32,17 +33,17 @@ export default function OnboardingWeeklyReportsScreen() {
               <Ionicons name="bar-chart" size={18} color={Colors.primary} />
             </View>
           </View>
-        </View>
+        </AnimatedEntry>
 
-        <View style={styles.info}>
+        <AnimatedEntry style={styles.info} delay={120}>
           <Text style={styles.title}>Weekly Reports</Text>
           <Text style={styles.desc}>
             Get a clear breakdown of your spending with simple,
             easy-to-understand reports.
           </Text>
-        </View>
+        </AnimatedEntry>
 
-        <View style={styles.footer}>
+        <AnimatedEntry style={styles.footer} delay={200}>
           <View style={styles.dots}>
             <View style={styles.dot} />
             <View style={[styles.dot, styles.dotActive]} />
@@ -50,12 +51,17 @@ export default function OnboardingWeeklyReportsScreen() {
           </View>
 
           <Pressable
-            style={styles.button}
+            style={({ pressed }) => [
+              styles.button,
+              pressed && styles.buttonPressed,
+            ]}
             onPress={() => router.push("/onboarding/sign-up")}
+            accessibilityRole="button"
+            android_ripple={{ color: Colors.white + "20" }}
           >
             <Text style={styles.buttonText}>Get Started</Text>
           </Pressable>
-        </View>
+        </AnimatedEntry>
       </View>
     </SafeAreaView>
   );
@@ -172,6 +178,10 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     justifyContent: "center",
     alignItems: "center",
+  },
+  buttonPressed: {
+    opacity: 0.92,
+    transform: [{ scale: 0.98 }],
   },
   buttonText: {
     ...Typography.button,

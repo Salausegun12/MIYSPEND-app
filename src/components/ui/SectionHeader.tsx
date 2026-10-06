@@ -1,8 +1,10 @@
 import React from "react";
-import { View, Text, StyleSheet, ViewStyle } from "react-native";
+import { View, Text, Pressable, StyleSheet, ViewStyle } from "react-native";
 import { Colors } from "../../constants/colors";
 import { Typography } from "../../constants/typography";
 import { Spacing } from "../../constants/spacing";
+import { Radius } from "../../constants/radius";
+import { Pressed } from "../../constants/motion";
 
 interface SectionHeaderProps {
   title: string;
@@ -21,9 +23,19 @@ export function SectionHeader({
     <View style={[styles.container, style]}>
       <Text style={styles.title}>{title}</Text>
       {action && (
-        <Text style={styles.action} onPress={onAction}>
-          {action}
-        </Text>
+        <Pressable
+          onPress={onAction}
+          disabled={!onAction}
+          accessibilityRole="button"
+          accessibilityLabel={action}
+          hitSlop={8}
+          style={({ pressed }) => [
+            styles.actionContainer,
+            pressed && styles.actionPressed,
+          ]}
+        >
+          <Text style={styles.action}>{action}</Text>
+        </Pressable>
       )}
     </View>
   );
@@ -40,9 +52,15 @@ const styles = StyleSheet.create({
     ...Typography.h3,
     color: Colors.textPrimary,
   },
+  actionContainer: {
+    paddingHorizontal: Spacing.xs,
+    paddingVertical: Spacing.xs,
+    borderRadius: Radius.sm,
+  },
   action: {
     ...Typography.bodySmall,
     color: Colors.primary,
     fontWeight: "500",
   },
+  actionPressed: Pressed.default,
 });

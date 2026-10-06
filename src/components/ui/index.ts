@@ -7,3 +7,4 @@ export { AmountText } from "./AmountText";
 export { IconContainer } from "./IconContainer";
 export { Divider } from "./Divider";
 export { EmptyState } from "./EmptyState";
+export { AnimatedEntry } from "./AnimatedEntry";

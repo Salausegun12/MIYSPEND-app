@@ -4,7 +4,7 @@
     "slug": "MiySpend",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./logo.png",
     "userInterfaceStyle": "light",
     "scheme": "miyspend",
     "ios": {
@@ -14,12 +14,11 @@
     },
     "android": {
       "package": "com.miyspend.app",
-      "versionCode": 1,
+      "versionCode": 4,
       "adaptiveIcon": {
         "backgroundColor": "#004D40",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "foregroundImage": "./logo.png",
+        "backgroundImage": "./assets/android-icon-background.png"
       },
       "predictiveBackGestureEnabled": false,
       "permissions": [
@@ -51,7 +50,14 @@
           "resizeMode": "contain",
           "backgroundColor": "#004D40"
         }
-      ]
-    ]
+      ],
+      "expo-sharing"
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "9536d2e9-a414-4528-b365-90c96c6ad8e9"
+      }
+    }
   }
 }

@@ -12,6 +12,7 @@ import { Radius } from "../../constants/radius";
 import { Shadows } from "../../constants/shadows";
 import { Typography } from "../../constants/typography";
 import { Spacing } from "../../constants/spacing";
+import { haptics } from "../../utils/haptics";
 
 type ButtonVariant = "primary" | "secondary" | "destructive";
 
@@ -36,16 +37,34 @@ export function Button({
 
   return (
     <Pressable
-      onPress={onPress}
+      onPress={() => {
+        if (variant === "destructive") {
+          haptics.press();
+        } else {
+          haptics.select();
+        }
+        onPress();
+      }}
       disabled={isDisabled}
       style={({ pressed }) => [
         styles.base,
         styles[variant],
+        pressed && !isDisabled && styles.pressed,
         pressed && !isDisabled && styles[`${variant}Pressed`],
         isDisabled && styles.disabled,
         style,
       ]}
+      android_ripple={{
+        color:
+          variant === "primary"
+            ? Colors.white + "20"
+            : variant === "destructive"
+              ? Colors.white + "20"
+              : Colors.primary + "20",
+        borderless: false,
+      }}
       accessibilityRole="button"
+      accessibilityLabel={title}
       accessibilityState={{ disabled: isDisabled, busy: loading }}
     >
       {loading ? (
@@ -97,6 +116,10 @@ const styles = StyleSheet.create({
   },
   destructivePressed: {
     backgroundColor: Colors.pressed.destructive,
+  },
+  pressed: {
+    opacity: 0.92,
+    transform: [{ scale: 0.98 }],
   },
   disabled: {
     backgroundColor: Colors.disabledBackground,

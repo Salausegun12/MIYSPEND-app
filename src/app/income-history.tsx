@@ -19,6 +19,7 @@ import { Colors } from "../constants/colors";
 import { Radius } from "../constants/radius";
 import { Typography } from "../constants/typography";
 import { Spacing } from "../constants/spacing";
+import { Pressed } from "../constants/motion";
 import { INCOME_SOURCE_COLORS, INCOME_SOURCE_ICONS } from "../constants/income";
 import { getIncomeByDateRange } from "../database/income";
 import {
@@ -152,7 +153,7 @@ export default function IncomeHistoryScreen() {
   const dateGroups = useMemo(() => groupByDate(incomes), [incomes]);
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top"]}>
+    <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
       <AnimatedEntry delay={40}>
         <View style={styles.header}>
           <Pressable
@@ -353,9 +354,7 @@ const styles = StyleSheet.create({
     color: Colors.surface,
     fontWeight: "600",
   },
-  filterChipPressed: {
-    opacity: 0.78,
-  },
+  filterChipPressed: Pressed.default,
   scrollContent: {
     paddingHorizontal: Spacing.base,
     paddingBottom: Spacing.xxxl,
@@ -389,9 +388,7 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
     paddingVertical: Spacing.xs,
   },
-  incomeRowPressed: {
-    opacity: 0.65,
-  },
+  incomeRowPressed: Pressed.default,
   incomeInfo: {
     flex: 1,
     gap: 2,
