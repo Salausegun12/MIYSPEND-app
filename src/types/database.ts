@@ -248,3 +248,20 @@ export interface RecurringProcessSummary {
   recordsProcessed: number;
   recordsDeactivated: number;
 }
+
+/**
+ * Visual tone used to colour an insight's icon and message.
+ */
+export type InsightTone = "positive" | "neutral" | "warning";
+
+/**
+ * A single offline financial insight: a short, deterministic, user-facing
+ * observation computed only from recorded transactions (never the bank).
+ * `icon` is an Ionicons name passed through to the UI as-is.
+ */
+export interface Insight {
+  id: string;
+  tone: InsightTone;
+  icon: string;
+  message: string;
+}

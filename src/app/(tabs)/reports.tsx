@@ -59,9 +59,12 @@ import {
   downloadSpendingReport,
   ReportDownloadError,
 } from "../../utils/reportDownload";
+import { computeInsights } from "../../database/insights";
 import type {
   ExpenseWithCategory,
   IncomeSource,
+  Insight,
+  InsightTone,
 } from "../../types/database";
 
 interface CategorySpending {
@@ -126,6 +129,8 @@ export default function ReportsScreen() {
   const [downloadingReportId, setDownloadingReportId] =
     useState<ReportPeriodId | null>(null);
   const [reportFeedback, setReportFeedback] = useState<string | null>(null);
+  const [insights, setInsights] = useState<Insight[]>([]);
+  const [insightsLoading, setInsightsLoading] = useState(true);
 
   const weekSunday = useMemo(
     () => getWeekEndForDate(selectedMonday),
@@ -312,6 +317,37 @@ export default function ReportsScreen() {
       };
     }, [db])
   );
+
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+
+      async function loadInsights() {
+        setInsightsLoading(true);
+        try {
+          const result = await computeInsights(db);
+          if (!cancelled) setInsights(result);
+        } catch (error) {
+          console.warn("Failed to load insights:", error);
+          if (!cancelled) setInsights([]);
+        } finally {
+          if (!cancelled) setInsightsLoading(false);
+        }
+      }
+
+      loadInsights();
+
+      return () => {
+        cancelled = true;
+      };
+    }, [db])
+  );
+
+  const insightToneColor = (tone: InsightTone): string => {
+    if (tone === "positive") return Colors.success;
+    if (tone === "warning") return Colors.warning;
+    return Colors.primary;
+  };
 
   const weekDiff = weekTotal - prevWeekTotal;
   const incomeDiff = weekIncome - prevWeekIncome;
@@ -566,6 +602,66 @@ export default function ReportsScreen() {
               ) : null}
             </>
           )}
+        </AnimatedEntry>
+
+        <AnimatedEntry style={styles.insightsSection} delay={80}>
+          <View style={styles.insightsHeader}>
+            <IconContainer size={44} backgroundColor={Colors.primarySoft}>
+              <Ionicons name="bulb-outline" size={22} color={Colors.primary} />
+            </IconContainer>
+            <View style={styles.insightsHeaderText}>
+              <Text style={styles.sectionTitle}>Insights</Text>
+              <Text style={styles.insightsSubtitle}>
+                Based on your recorded transactions this month
+              </Text>
+            </View>
+          </View>
+
+          {insightsLoading ? (
+            <Card style={styles.insightsCard}>
+              <View style={styles.insightsLoading}>
+                <ActivityIndicator size="small" color={Colors.primary} />
+                <Text style={styles.insightsLoadingText}>
+                  Analysing your transactions...
+                </Text>
+              </View>
+            </Card>
+          ) : insights.length === 0 ? (
+            <Card style={styles.insightsCard}>
+              <Text style={styles.insightsEmpty}>
+                Record at least one income or expense this month to start seeing
+                insights.
+              </Text>
+            </Card>
+          ) : (
+            <Card style={styles.insightsCard}>
+              {insights.map((insight, index) => {
+                const toneColor = insightToneColor(insight.tone);
+                return (
+                  <React.Fragment key={insight.id}>
+                    {index > 0 && <View style={styles.highlightDivider} />}
+                    <View style={styles.insightRow}>
+                      <IconContainer
+                        size={36}
+                        backgroundColor={toneColor + "20"}
+                      >
+                        <Ionicons
+                          name={insight.icon as keyof typeof Ionicons.glyphMap}
+                          size={18}
+                          color={toneColor}
+                        />
+                      </IconContainer>
+                      <Text style={styles.insightMessage}>{insight.message}</Text>
+                    </View>
+                  </React.Fragment>
+                );
+              })}
+            </Card>
+          )}
+          <Text style={styles.netNote}>
+            Insights are calculated offline from transactions you recorded.
+            They never guess your bank balance.
+          </Text>
         </AnimatedEntry>
 
         <AnimatedEntry style={styles.weekNav} delay={120}>
@@ -1160,6 +1256,53 @@ const styles = StyleSheet.create({
     ...Typography.caption,
     color: Colors.textSecondary,
     textAlign: "center",
+  },
+  insightsSection: {
+    gap: Spacing.sm,
+  },
+  insightsHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.md,
+  },
+  insightsHeaderText: {
+    flex: 1,
+    gap: Spacing.xs,
+  },
+  insightsSubtitle: {
+    ...Typography.bodySmall,
+    color: Colors.textSecondary,
+  },
+  insightsCard: {
+    padding: Spacing.sm,
+    gap: Spacing.sm,
+  },
+  insightsLoading: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: Spacing.sm,
+    paddingVertical: Spacing.sm,
+  },
+  insightsLoadingText: {
+    ...Typography.bodySmall,
+    color: Colors.textSecondary,
+  },
+  insightsEmpty: {
+    ...Typography.bodySmall,
+    color: Colors.textSecondary,
+    textAlign: "center",
+    paddingVertical: Spacing.sm,
+  },
+  insightRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.md,
+  },
+  insightMessage: {
+    flex: 1,
+    ...Typography.bodySmall,
+    color: Colors.textPrimary,
   },
   weekNav: {
     flexDirection: "row",
