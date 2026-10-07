@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useMemo } from "react";
+import { LinearGradient } from "expo-linear-gradient";
 import {
   View,
   Text,
@@ -16,6 +17,9 @@ import { AnimatedEntry } from "../../components/ui/AnimatedEntry";
 import { Card } from "../../components/ui/Card";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { IconContainer } from "../../components/ui/IconContainer";
+import { BarChart } from "../../components/charts/BarChart";
+import { PieChart } from "../../components/charts/PieChart";
+import { HBarChart } from "../../components/charts/HBarChart";
 import { Colors } from "../../constants/colors";
 import { Radius } from "../../constants/radius";
 import { Shadows } from "../../constants/shadows";
@@ -55,6 +59,11 @@ import {
   type ReportPeriodId,
 } from "../../utils/reportPeriods";
 import { createSpendingReportHtml } from "../../utils/reportExport";
+import { getBudgetsWithSpending } from "../../database/budget";
+import {
+  getContributionsInPeriod,
+  getGoalsWithBalances,
+} from "../../database/savingsGoals";
 import {
   downloadSpendingReport,
   ReportDownloadError,
@@ -356,14 +365,43 @@ export default function ReportsScreen() {
   const hasData = weekTotal > 0 || weekIncome > 0;
   const hasPrevData = prevWeekTotal > 0;
   const hasPrevIncome = prevWeekIncome > 0;
-  const maxDaily = useMemo(
-    () => Math.max(...dailySpending.map((d) => d.total), 1),
-    [dailySpending]
-  );
-  const maxSource = useMemo(
-    () => Math.max(...sourceIncome.map((s) => s.total), 1),
-    [sourceIncome]
-  );
+  const highlightItems = useMemo(() => {
+    const items: {
+      id: string;
+      label: string;
+      valueText: string;
+      value: number;
+      color: string;
+    }[] = [];
+    if (highestSource) {
+      items.push({
+        id: "source",
+        label: "Highest Income Source",
+        valueText: highestSource.source,
+        value: highestSource.total,
+        color: INCOME_SOURCE_COLORS[highestSource.source] ?? Colors.primary,
+      });
+    }
+    if (highestCategory) {
+      items.push({
+        id: "category",
+        label: "Highest Category",
+        valueText: highestCategory.category_name,
+        value: highestCategory.total,
+        color: highestCategory.category_color,
+      });
+    }
+    if (highestDay && highestDay.total > 0) {
+      items.push({
+        id: "day",
+        label: "Highest Day",
+        valueText: `${highestDay.dayName}, ${highestDay.shortDate}`,
+        value: highestDay.total,
+        color: Colors.primary,
+      });
+    }
+    return items;
+  }, [highestSource, highestCategory, highestDay]);
   const selectedReport = useMemo(
     () =>
       reportOptions.find((option) => option.period.id === selectedReportId) ??
@@ -388,11 +426,23 @@ export default function ReportsScreen() {
     setReportFeedback(null);
 
     try {
-      const html = createSpendingReportHtml(
-        selectedReport.period,
-        selectedReport.expenses,
-        recordedDataStart
-      );
+      const period = selectedReport.period;
+      const [incomes, budgets, goals, contributions] = await Promise.all([
+        getIncomeByDateRange(db, period.startDate, period.endDate),
+        getBudgetsWithSpending(db, {
+          start: period.startDateTime,
+          end: period.dataEndDateTime,
+        }),
+        getGoalsWithBalances(db),
+        getContributionsInPeriod(db, period.startDate, period.endDate),
+      ]);
+      const html = createSpendingReportHtml(period, selectedReport.expenses, recordedDataStart, {
+        incomes,
+        budgets,
+        goals,
+        contributionsTotal: contributions.total,
+        contributionsCount: contributions.count,
+      });
       await downloadSpendingReport(
         html,
         `miyspend-${selectedReport.period.id}-${getTodayString()}.pdf`
@@ -412,7 +462,7 @@ export default function ReportsScreen() {
     } finally {
       setDownloadingReportId(null);
     }
-  }, [recordedDataStart, selectedReport]);
+  }, [db, recordedDataStart, selectedReport]);
 
   if (loading) {
     return (
@@ -440,16 +490,380 @@ export default function ReportsScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <AnimatedEntry style={styles.downloadSection} delay={40}>
+        <AnimatedEntry style={styles.weekNav} delay={40}>
+          <Pressable
+            onPress={() => setSelectedMonday(shiftWeek(selectedMonday, -1))}
+            style={({ pressed }) => [
+              styles.navArrow,
+              pressed && styles.navArrowPressed,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Previous week"
+          >
+            <Ionicons name="chevron-back" size={24} color={Colors.primary} />
+          </Pressable>
+          <View style={styles.weekInfoPill}>
+            <View style={styles.weekInfo}>
+              <Text style={styles.weekLabel}>
+                {isCurrentWeek ? "This Week" : "Week of"}
+              </Text>
+              <Text style={styles.weekRange}>
+                {formatWeekRange(selectedMonday, weekSunday)}
+              </Text>
+            </View>
+          </View>
+          <Pressable
+            onPress={() => setSelectedMonday(shiftWeek(selectedMonday, 1))}
+            style={({ pressed }) => [
+              styles.navArrow,
+              pressed && styles.navArrowPressed,
+            ]}
+            disabled={isCurrentWeek}
+            accessibilityRole="button"
+            accessibilityLabel="Next week"
+            accessibilityState={{ disabled: isCurrentWeek }}
+          >
+            <Ionicons
+              name="chevron-forward"
+              size={24}
+              color={isCurrentWeek ? Colors.disabled : Colors.primary}
+            />
+          </Pressable>
+        </AnimatedEntry>
+        {!hasData ? (
+          <EmptyState
+            title="Nothing recorded this week"
+            message="Income and expenses you record for this week will appear here."
+            icon={
+              <Ionicons
+                name="bar-chart-outline"
+                size={48}
+                color={Colors.primary}
+              />
+            }
+          />
+        ) : (
+          <>
+            <View style={styles.summaryRow}>
+              <LinearGradient
+                colors={Colors.gradient.mint}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.summaryCardGradient}
+              >
+                <Text style={styles.summaryLabelOnColor}>Total Income</Text>
+                <Text style={styles.summaryAmountOnColor}>
+                  {formatKoboAmount(weekIncome)}
+                </Text>
+              </LinearGradient>
+              <LinearGradient
+                colors={Colors.gradient.sunset}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.summaryCardGradient}
+              >
+                <Text style={styles.summaryLabelOnColor}>Total Expenses</Text>
+                <Text style={styles.summaryAmountOnColor}>
+                  {formatKoboAmount(weekTotal)}
+                </Text>
+              </LinearGradient>
+            </View>
+
+            <View style={styles.summaryRow}>
+              <LinearGradient
+                colors={Colors.gradient.violet}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.summaryCardGradient}
+              >
+                <Text style={styles.summaryLabelOnColor}>Net</Text>
+                <Text
+                  style={[
+                    styles.summaryAmountOnColor,
+                    weekNet < 0 && styles.summaryAmountOnColorNeg,
+                  ]}
+                >
+                  {formatSignedKoboAmount(weekNet)}
+                </Text>
+              </LinearGradient>
+              <Card style={[styles.summaryCard, styles.summaryCardSky]}>
+                <Text style={styles.summaryLabelSky}>Daily Avg Income</Text>
+                <Text style={styles.summaryAmountSky}>
+                  {formatKoboAmount(averageDailyIncome)}
+                </Text>
+              </Card>
+            </View>
+
+            <View style={styles.summaryRow}>
+              <Card style={[styles.summaryCard, styles.summaryCardCoral]}>
+                <Text style={styles.summaryLabelCoral}>Daily Avg Expenses</Text>
+                <Text style={styles.summaryAmountCoral}>
+                  {formatKoboAmount(averageDaily)}
+                </Text>
+              </Card>
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Daily Spending</Text>
+              <Card style={styles.chartCard}>
+                <BarChart
+                  data={dailySpending.map((day) => ({
+                    id: day.date,
+                    label: day.dayName,
+                    subLabel: day.shortDate,
+                    value: day.total,
+                  }))}
+                  activeId={getTodayString()}
+                  formatValue={formatKoboAmount}
+                  plotHeight={124}
+                  color={Colors.accent.rose}
+                  colorSoft="#FDA4AF"
+                />
+              </Card>
+            </View>
+
+            {sourceIncome.length > 0 && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Income by Source</Text>
+                <Card style={styles.chartCard}>
+                  <PieChart
+                    data={sourceIncome.map((src) => ({
+                      id: src.source,
+                      label: src.source,
+                      value: src.total,
+                      color:
+                        INCOME_SOURCE_COLORS[src.source] ?? Colors.primary,
+                      icon:
+                        INCOME_SOURCE_ICONS[src.source] ?? "wallet-outline",
+                    }))}
+                    total={weekIncome}
+                    centerLabel="Total Income"
+                    formatValue={formatKoboAmount}
+                    size={148}
+                    stroke={22}
+                  />
+                </Card>
+              </View>
+            )}
+
+            {highestCategory && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Spending by Category</Text>
+                <Card style={styles.categoryCard}>
+                  {categorySpending.map((cat) => {
+                    const pct =
+                      weekTotal > 0
+                        ? Math.round((cat.total / weekTotal) * 100)
+                        : 0;
+                    return (
+                      <View key={cat.category_id} style={styles.catRow}>
+                        <IconContainer
+                          size={36}
+                          backgroundColor={cat.category_color + "20"}
+                        >
+                          <Text style={styles.catIcon}>
+                            {cat.category_icon}
+                          </Text>
+                        </IconContainer>
+                        <View style={styles.catInfo}>
+                          <View style={styles.catHeader}>
+                            <Text style={styles.catName}>
+                              {cat.category_name}
+                            </Text>
+                            <Text style={styles.catPct}>{pct}%</Text>
+                          </View>
+                          <View style={styles.catBarBg}>
+                            <View
+                              style={[
+                                styles.catBarFill,
+                                {
+                                  width: `${pct}%`,
+                                  backgroundColor: cat.category_color,
+                                },
+                              ]}
+                            />
+                          </View>
+                        </View>
+                        <Text style={styles.catAmount}>
+                          {formatKoboAmount(cat.total)}
+                        </Text>
+                      </View>
+                    );
+                  })}
+                </Card>
+              </View>
+            )}
+
+            {highlightItems.length > 0 && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Highlights</Text>
+                <Card style={styles.chartCard}>
+                  <HBarChart
+                    items={highlightItems}
+                    formatValue={formatKoboAmount}
+                  />
+                </Card>
+              </View>
+            )}
+
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>
+                Compare with Previous Week
+              </Text>
+              <Card style={styles.compareCard}>
+                <View style={styles.compareRow}>
+                  <View style={styles.compareItem}>
+                    <Text style={styles.compareLabel}>Previous Expenses</Text>
+                    <Text style={styles.compareAmount}>
+                      {formatKoboAmount(prevWeekTotal)}
+                    </Text>
+                  </View>
+                  <View style={styles.compareDivider} />
+                  <View style={styles.compareItem}>
+                    <Text style={styles.compareLabel}>Difference</Text>
+                    <Text
+                      style={[
+                        styles.compareDiff,
+                        weekDiff > 0
+                          ? styles.diffIncrease
+                          : weekDiff < 0
+                            ? styles.diffDecrease
+                            : styles.diffNeutral,
+                      ]}
+                    >
+                      {formatSignedKoboAmount(weekDiff)}
+                    </Text>
+                    {!hasPrevData && weekTotal > 0 ? (
+                      <Text style={styles.compareNote}>
+                        No expenses recorded last week
+                      </Text>
+                    ) : weekDiff > 0 ? (
+                      <Text style={styles.compareNote}>
+                        Spending increased
+                      </Text>
+                    ) : weekDiff < 0 ? (
+                      <Text style={styles.compareNote}>
+                        Spending decreased
+                      </Text>
+                    ) : (
+                      <Text style={styles.compareNote}>
+                        Same as last week
+                      </Text>
+                    )}
+                  </View>
+                </View>
+
+                <View style={styles.highlightDivider} />
+
+                <View style={styles.compareRow}>
+                  <View style={styles.compareItem}>
+                    <Text style={styles.compareLabel}>Previous Income</Text>
+                    <Text style={styles.compareAmount}>
+                      {formatKoboAmount(prevWeekIncome)}
+                    </Text>
+                  </View>
+                  <View style={styles.compareDivider} />
+                  <View style={styles.compareItem}>
+                    <Text style={styles.compareLabel}>Difference</Text>
+                    <Text
+                      style={[
+                        styles.compareDiff,
+                        styles.incomeAmount,
+                        incomeDiff === 0 ? styles.diffNeutral : undefined,
+                      ]}
+                    >
+                      {formatSignedKoboAmount(incomeDiff)}
+                    </Text>
+                    {!hasPrevIncome && weekIncome > 0 ? (
+                      <Text style={styles.compareNote}>
+                        No income recorded last week
+                      </Text>
+                    ) : incomeDiff > 0 ? (
+                      <Text style={styles.compareNote}>Income increased</Text>
+                    ) : incomeDiff < 0 ? (
+                      <Text style={styles.compareNote}>Income decreased</Text>
+                    ) : (
+                      <Text style={styles.compareNote}>
+                        Same as last week
+                      </Text>
+                    )}
+                  </View>
+                </View>
+              </Card>
+            </View>
+          </>
+        )}
+
+        <AnimatedEntry style={styles.insightsSection} delay={80}>
+          <View style={styles.insightsHeader}>
+            <IconContainer size={44} backgroundColor={Colors.accent.goldSoft}>
+              <Ionicons name="bulb-outline" size={22} color={Colors.accent.gold} />
+            </IconContainer>
+            <View style={styles.insightsHeaderText}>
+              <Text style={styles.sectionTitle}>Insights</Text>
+              <Text style={styles.insightsSubtitle}>
+                Based on your recorded transactions this month
+              </Text>
+            </View>
+          </View>
+
+          {insightsLoading ? (
+            <Card style={styles.insightsCard}>
+              <View style={styles.insightsLoading}>
+                <ActivityIndicator size="small" color={Colors.primary} />
+                <Text style={styles.insightsLoadingText}>
+                  Analysing your transactions...
+                </Text>
+              </View>
+            </Card>
+          ) : insights.length === 0 ? (
+            <Card style={styles.insightsCard}>
+              <Text style={styles.insightsEmpty}>
+                Record at least one income or expense this month to start seeing
+                insights.
+              </Text>
+            </Card>
+          ) : (
+            <Card style={styles.insightsCard}>
+              {insights.map((insight, index) => {
+                const toneColor = insightToneColor(insight.tone);
+                return (
+                  <React.Fragment key={insight.id}>
+                    {index > 0 && <View style={styles.highlightDivider} />}
+                    <View style={styles.insightRow}>
+                      <IconContainer
+                        size={36}
+                        backgroundColor={toneColor + "20"}
+                      >
+                        <Ionicons
+                          name={insight.icon as keyof typeof Ionicons.glyphMap}
+                          size={18}
+                          color={toneColor}
+                        />
+                      </IconContainer>
+                      <Text style={styles.insightMessage}>{insight.message}</Text>
+                    </View>
+                  </React.Fragment>
+                );
+              })}
+            </Card>
+          )}
+          <Text style={styles.netNote}>
+            Insights are calculated offline from transactions you recorded.
+            They never guess your bank balance.
+          </Text>
+        </AnimatedEntry>
+
+        <AnimatedEntry style={styles.downloadSection} delay={120}>
           <View style={styles.downloadHeader}>
             <IconContainer
               size={44}
-              backgroundColor={Colors.primarySoft}
+              backgroundColor={Colors.accent.violetSoft}
             >
               <Ionicons
                 name="download-outline"
                 size={22}
-                color={Colors.primary}
+                color={Colors.accent.violet}
               />
             </IconContainer>
             <View style={styles.downloadHeaderText}>
@@ -604,504 +1018,6 @@ export default function ReportsScreen() {
           )}
         </AnimatedEntry>
 
-        <AnimatedEntry style={styles.insightsSection} delay={80}>
-          <View style={styles.insightsHeader}>
-            <IconContainer size={44} backgroundColor={Colors.primarySoft}>
-              <Ionicons name="bulb-outline" size={22} color={Colors.primary} />
-            </IconContainer>
-            <View style={styles.insightsHeaderText}>
-              <Text style={styles.sectionTitle}>Insights</Text>
-              <Text style={styles.insightsSubtitle}>
-                Based on your recorded transactions this month
-              </Text>
-            </View>
-          </View>
-
-          {insightsLoading ? (
-            <Card style={styles.insightsCard}>
-              <View style={styles.insightsLoading}>
-                <ActivityIndicator size="small" color={Colors.primary} />
-                <Text style={styles.insightsLoadingText}>
-                  Analysing your transactions...
-                </Text>
-              </View>
-            </Card>
-          ) : insights.length === 0 ? (
-            <Card style={styles.insightsCard}>
-              <Text style={styles.insightsEmpty}>
-                Record at least one income or expense this month to start seeing
-                insights.
-              </Text>
-            </Card>
-          ) : (
-            <Card style={styles.insightsCard}>
-              {insights.map((insight, index) => {
-                const toneColor = insightToneColor(insight.tone);
-                return (
-                  <React.Fragment key={insight.id}>
-                    {index > 0 && <View style={styles.highlightDivider} />}
-                    <View style={styles.insightRow}>
-                      <IconContainer
-                        size={36}
-                        backgroundColor={toneColor + "20"}
-                      >
-                        <Ionicons
-                          name={insight.icon as keyof typeof Ionicons.glyphMap}
-                          size={18}
-                          color={toneColor}
-                        />
-                      </IconContainer>
-                      <Text style={styles.insightMessage}>{insight.message}</Text>
-                    </View>
-                  </React.Fragment>
-                );
-              })}
-            </Card>
-          )}
-          <Text style={styles.netNote}>
-            Insights are calculated offline from transactions you recorded.
-            They never guess your bank balance.
-          </Text>
-        </AnimatedEntry>
-
-        <AnimatedEntry style={styles.weekNav} delay={120}>
-          <Pressable
-            onPress={() => setSelectedMonday(shiftWeek(selectedMonday, -1))}
-            style={({ pressed }) => [
-              styles.navArrow,
-              pressed && styles.navArrowPressed,
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel="Previous week"
-          >
-            <Ionicons name="chevron-back" size={24} color={Colors.primary} />
-          </Pressable>
-          <View style={styles.weekInfoPill}>
-            <View style={styles.weekInfo}>
-              <Text style={styles.weekLabel}>
-                {isCurrentWeek ? "This Week" : "Week of"}
-              </Text>
-              <Text style={styles.weekRange}>
-                {formatWeekRange(selectedMonday, weekSunday)}
-              </Text>
-            </View>
-          </View>
-          <Pressable
-            onPress={() => setSelectedMonday(shiftWeek(selectedMonday, 1))}
-            style={({ pressed }) => [
-              styles.navArrow,
-              pressed && styles.navArrowPressed,
-            ]}
-            disabled={isCurrentWeek}
-            accessibilityRole="button"
-            accessibilityLabel="Next week"
-            accessibilityState={{ disabled: isCurrentWeek }}
-          >
-            <Ionicons
-              name="chevron-forward"
-              size={24}
-              color={isCurrentWeek ? Colors.disabled : Colors.primary}
-            />
-          </Pressable>
-        </AnimatedEntry>
-
-        {!hasData ? (
-          <EmptyState
-            title="Nothing recorded this week"
-            message="Income and expenses you record for this week will appear here."
-            icon={
-              <Ionicons
-                name="bar-chart-outline"
-                size={48}
-                color={Colors.primary}
-              />
-            }
-          />
-        ) : (
-          <>
-            <View style={styles.summaryRow}>
-              <Card style={styles.summaryCardHero}>
-                <Text style={styles.summaryLabelHero}>Total Income</Text>
-                <Text style={[styles.summaryAmountHero, styles.incomeHero]}>
-                  {formatKoboAmount(weekIncome)}
-                </Text>
-              </Card>
-              <Card style={styles.summaryCard}>
-                <Text style={styles.summaryLabel}>Total Expenses</Text>
-                <Text style={styles.summaryAmount}>
-                  {formatKoboAmount(weekTotal)}
-                </Text>
-              </Card>
-            </View>
-
-            <View style={styles.summaryRow}>
-              <Card style={styles.summaryCard}>
-                <Text style={styles.summaryLabel}>Net</Text>
-                <Text
-                  style={[
-                    styles.summaryAmount,
-                    weekNet >= 0 ? styles.netPositive : styles.netNegative,
-                  ]}
-                >
-                  {formatSignedKoboAmount(weekNet)}
-                </Text>
-              </Card>
-              <Card style={styles.summaryCard}>
-                <Text style={styles.summaryLabel}>Daily Avg Income</Text>
-                <Text style={styles.summaryAmount}>
-                  {formatKoboAmount(averageDailyIncome)}
-                </Text>
-              </Card>
-            </View>
-
-            <View style={styles.summaryRow}>
-              <Card style={styles.summaryCard}>
-                <Text style={styles.summaryLabel}>Daily Avg Expenses</Text>
-                <Text style={styles.summaryAmount}>
-                  {formatKoboAmount(averageDaily)}
-                </Text>
-              </Card>
-            </View>
-
-            <Text style={styles.netNote}>
-              Net is income you recorded minus expenses you recorded. It is not
-              your bank balance.
-            </Text>
-
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Daily Spending</Text>
-              <Card style={styles.dailyCard}>
-                {dailySpending.map((day) => {
-                  const barWidth =
-                    maxDaily > 0 ? (day.total / maxDaily) * 100 : 0;
-                  const isToday = day.date === getTodayString();
-                  return (
-                    <View key={day.date} style={styles.dailyRow}>
-                      <View style={styles.dailyLeft}>
-                        <Text
-                          style={[
-                            styles.dailyDayName,
-                            isToday && styles.dailyDayNameActive,
-                          ]}
-                        >
-                          {day.dayName}
-                        </Text>
-                        <Text style={styles.dailyDate}>{day.shortDate}</Text>
-                      </View>
-                      <View style={styles.dailyBarContainer}>
-                        <View
-                          style={[
-                            styles.dailyBar,
-                            {
-                              width: `${barWidth}%`,
-                              backgroundColor:
-                                day.total === 0
-                                  ? Colors.disabled
-                                  : isToday
-                                  ? Colors.primary
-                                  : Colors.primaryLight,
-                            },
-                          ]}
-                        />
-                      </View>
-                      <Text
-                        style={[
-                          styles.dailyAmount,
-                          day.total === 0 && styles.dailyAmountZero,
-                        ]}
-                      >
-                        {day.total > 0 ? formatKoboAmount(day.total) : "₦0"}
-                      </Text>
-                    </View>
-                  );
-                })}
-              </Card>
-            </View>
-
-            {sourceIncome.length > 0 && (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Income by Source</Text>
-                <Card style={styles.categoryCard}>
-                  {sourceIncome.map((src) => {
-                    const pct =
-                      weekIncome > 0
-                        ? Math.round((src.total / weekIncome) * 100)
-                        : 0;
-                    const color =
-                      INCOME_SOURCE_COLORS[src.source] ?? Colors.primary;
-                    return (
-                      <View key={src.source} style={styles.catRow}>
-                        <IconContainer
-                          size={36}
-                          backgroundColor={color + "20"}
-                        >
-                          <Ionicons
-                            name={
-                              INCOME_SOURCE_ICONS[src.source] ??
-                              "wallet-outline"
-                            }
-                            size={18}
-                            color={color}
-                          />
-                        </IconContainer>
-                        <View style={styles.catInfo}>
-                          <View style={styles.catHeader}>
-                            <Text style={styles.catName}>{src.source}</Text>
-                            <Text style={styles.catPct}>{pct}%</Text>
-                          </View>
-                          <View style={styles.catBarBg}>
-                            <View
-                              style={[
-                                styles.catBarFill,
-                                {
-                                  width: `${pct}%`,
-                                  backgroundColor: color,
-                                },
-                              ]}
-                            />
-                          </View>
-                        </View>
-                        <Text style={styles.incomeAmount}>
-                          {formatKoboAmount(src.total)}
-                        </Text>
-                      </View>
-                    );
-                  })}
-                </Card>
-              </View>
-            )}
-
-            {highestCategory && (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Spending by Category</Text>
-                <Card style={styles.categoryCard}>
-                  {categorySpending.map((cat) => {
-                    const pct =
-                      weekTotal > 0
-                        ? Math.round((cat.total / weekTotal) * 100)
-                        : 0;
-                    return (
-                      <View key={cat.category_id} style={styles.catRow}>
-                        <IconContainer
-                          size={36}
-                          backgroundColor={cat.category_color + "20"}
-                        >
-                          <Text style={styles.catIcon}>
-                            {cat.category_icon}
-                          </Text>
-                        </IconContainer>
-                        <View style={styles.catInfo}>
-                          <View style={styles.catHeader}>
-                            <Text style={styles.catName}>
-                              {cat.category_name}
-                            </Text>
-                            <Text style={styles.catPct}>{pct}%</Text>
-                          </View>
-                          <View style={styles.catBarBg}>
-                            <View
-                              style={[
-                                styles.catBarFill,
-                                {
-                                  width: `${pct}%`,
-                                  backgroundColor: cat.category_color,
-                                },
-                              ]}
-                            />
-                          </View>
-                        </View>
-                        <Text style={styles.catAmount}>
-                          {formatKoboAmount(cat.total)}
-                        </Text>
-                      </View>
-                    );
-                  })}
-                </Card>
-              </View>
-            )}
-
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Highlights</Text>
-              <Card style={styles.highlightsCard}>
-                {highestSource && (
-                  <View style={styles.highlightRow}>
-                    <IconContainer
-                      size={36}
-                      backgroundColor={
-                        (INCOME_SOURCE_COLORS[highestSource.source] ??
-                          Colors.primary) + "20"
-                      }
-                    >
-                      <Ionicons
-                        name={
-                          INCOME_SOURCE_ICONS[highestSource.source] ??
-                          "wallet-outline"
-                        }
-                        size={18}
-                        color={
-                          INCOME_SOURCE_COLORS[highestSource.source] ??
-                          Colors.primary
-                        }
-                      />
-                    </IconContainer>
-                    <View style={styles.highlightInfo}>
-                      <Text style={styles.highlightLabel}>
-                        Highest Income Source
-                      </Text>
-                      <Text style={styles.highlightValue}>
-                        {highestSource.source}
-                      </Text>
-                    </View>
-                    <Text
-                      style={[styles.highlightAmount, styles.incomeAmount]}
-                    >
-                      {formatKoboAmount(highestSource.total)}
-                    </Text>
-                  </View>
-                )}
-                {highestSource && highestCategory ? (
-                  <View style={styles.highlightDivider} />
-                ) : null}
-                {highestCategory && (
-                  <View style={styles.highlightRow}>
-                    <IconContainer
-                      size={36}
-                      backgroundColor={highestCategory.category_color + "20"}
-                    >
-                      <Text style={styles.catIcon}>
-                        {highestCategory.category_icon}
-                      </Text>
-                    </IconContainer>
-                    <View style={styles.highlightInfo}>
-                      <Text style={styles.highlightLabel}>
-                        Highest Category
-                      </Text>
-                      <Text style={styles.highlightValue}>
-                        {highestCategory.category_name}
-                      </Text>
-                    </View>
-                    <Text style={styles.highlightAmount}>
-                      {formatKoboAmount(highestCategory.total)}
-                    </Text>
-                  </View>
-                )}
-                {highestDay && highestDay.total > 0 && (
-                  <>
-                    <View style={styles.highlightDivider} />
-                    <View style={styles.highlightRow}>
-                      <IconContainer
-                        size={36}
-                        backgroundColor={Colors.primarySoft}
-                      >
-                        <Ionicons
-                          name="trending-up"
-                          size={18}
-                          color={Colors.primary}
-                        />
-                      </IconContainer>
-                      <View style={styles.highlightInfo}>
-                        <Text style={styles.highlightLabel}>
-                          Highest Day
-                        </Text>
-                        <Text style={styles.highlightValue}>
-                          {highestDay.dayName}, {highestDay.shortDate}
-                        </Text>
-                      </View>
-                      <Text style={styles.highlightAmount}>
-                        {formatKoboAmount(highestDay.total)}
-                      </Text>
-                    </View>
-                  </>
-                )}
-              </Card>
-            </View>
-
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>
-                Compare with Previous Week
-              </Text>
-              <Card style={styles.compareCard}>
-                <View style={styles.compareRow}>
-                  <View style={styles.compareItem}>
-                    <Text style={styles.compareLabel}>Previous Expenses</Text>
-                    <Text style={styles.compareAmount}>
-                      {formatKoboAmount(prevWeekTotal)}
-                    </Text>
-                  </View>
-                  <View style={styles.compareDivider} />
-                  <View style={styles.compareItem}>
-                    <Text style={styles.compareLabel}>Difference</Text>
-                    <Text
-                      style={[
-                        styles.compareDiff,
-                        weekDiff > 0
-                          ? styles.diffIncrease
-                          : weekDiff < 0
-                            ? styles.diffDecrease
-                            : styles.diffNeutral,
-                      ]}
-                    >
-                      {formatSignedKoboAmount(weekDiff)}
-                    </Text>
-                    {!hasPrevData && weekTotal > 0 ? (
-                      <Text style={styles.compareNote}>
-                        No expenses recorded last week
-                      </Text>
-                    ) : weekDiff > 0 ? (
-                      <Text style={styles.compareNote}>
-                        Spending increased
-                      </Text>
-                    ) : weekDiff < 0 ? (
-                      <Text style={styles.compareNote}>
-                        Spending decreased
-                      </Text>
-                    ) : (
-                      <Text style={styles.compareNote}>
-                        Same as last week
-                      </Text>
-                    )}
-                  </View>
-                </View>
-
-                <View style={styles.highlightDivider} />
-
-                <View style={styles.compareRow}>
-                  <View style={styles.compareItem}>
-                    <Text style={styles.compareLabel}>Previous Income</Text>
-                    <Text style={styles.compareAmount}>
-                      {formatKoboAmount(prevWeekIncome)}
-                    </Text>
-                  </View>
-                  <View style={styles.compareDivider} />
-                  <View style={styles.compareItem}>
-                    <Text style={styles.compareLabel}>Difference</Text>
-                    <Text
-                      style={[
-                        styles.compareDiff,
-                        styles.incomeAmount,
-                        incomeDiff === 0 ? styles.diffNeutral : undefined,
-                      ]}
-                    >
-                      {formatSignedKoboAmount(incomeDiff)}
-                    </Text>
-                    {!hasPrevIncome && weekIncome > 0 ? (
-                      <Text style={styles.compareNote}>
-                        No income recorded last week
-                      </Text>
-                    ) : incomeDiff > 0 ? (
-                      <Text style={styles.compareNote}>Income increased</Text>
-                    ) : incomeDiff < 0 ? (
-                      <Text style={styles.compareNote}>Income decreased</Text>
-                    ) : (
-                      <Text style={styles.compareNote}>
-                        Same as last week
-                      </Text>
-                    )}
-                  </View>
-                </View>
-              </Card>
-            </View>
-          </>
-        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -1132,7 +1048,7 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: Spacing.base,
     paddingBottom: Spacing.xxxl,
-    gap: Spacing.base,
+    gap: Spacing.lg,
   },
   downloadSection: {
     gap: Spacing.md,
@@ -1310,7 +1226,15 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   navArrow: {
-    padding: Spacing.sm,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+    ...Shadows.sm,
   },
   navArrowPressed: {
     opacity: 0.55,
@@ -1320,8 +1244,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
+    borderWidth: 1.5,
+    borderColor: Colors.primary + "40",
     borderRadius: Radius.xl,
     paddingVertical: Spacing.sm,
     paddingHorizontal: Spacing.lg,
@@ -1334,191 +1258,156 @@ const styles = StyleSheet.create({
   weekLabel: {
     ...Typography.caption,
     color: Colors.textSecondary,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
   weekRange: {
     ...Typography.bodyMedium,
-    color: Colors.textPrimary,
+    color: Colors.primary,
+    fontWeight: "700",
   },
   summaryRow: {
     flexDirection: "row",
-    gap: Spacing.base,
+    gap: Spacing.sm,
   },
   summaryCard: {
     flex: 1,
   },
-  summaryLabel: {
-    ...Typography.bodySmall,
-    color: Colors.textSecondary,
-    marginBottom: Spacing.xs,
-  },
-  summaryAmount: {
-    ...Typography.amountSmall,
-    color: Colors.textPrimary,
-  },
-  summaryCardHero: {
+  summaryCardGradient: {
     flex: 1,
-    backgroundColor: Colors.primarySoft,
-    borderColor: Colors.primarySoft,
+    gap: Spacing.xs,
+    borderRadius: Radius.xl,
+    padding: Spacing.base,
+    ...Shadows.md,
   },
-  summaryLabelHero: {
-    ...Typography.bodySmall,
-    color: Colors.primary,
+  summaryLabelOnColor: {
+    ...Typography.caption,
+    color: "rgba(255,255,255,0.78)",
     marginBottom: Spacing.xs,
-    fontWeight: "600",
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.3,
   },
-  summaryAmountHero: {
+  summaryAmountOnColor: {
     ...Typography.amountSmall,
-    color: Colors.primary,
+    color: Colors.white,
+  },
+  summaryAmountOnColorNeg: {
+    color: "#FFE1E6",
+  },
+  summaryCardSky: {
+    backgroundColor: Colors.accent.skySoft,
+    borderColor: "#BEE7FB",
+  },
+  summaryLabelSky: {
+    ...Typography.caption,
+    color: Colors.accent.sky,
+    marginBottom: Spacing.xs,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.3,
+  },
+  summaryAmountSky: {
+    ...Typography.amountSmall,
+    color: "#0369A1",
+  },
+  summaryCardCoral: {
+    backgroundColor: Colors.accent.coralSoft,
+    borderColor: "#FFE0CC",
+  },
+  summaryLabelCoral: {
+    ...Typography.caption,
+    color: Colors.accent.coral,
+    marginBottom: Spacing.xs,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.3,
+  },
+  summaryAmountCoral: {
+    ...Typography.amountSmall,
+    color: "#C2410C",
   },
   section: {
     gap: Spacing.sm,
   },
   sectionTitle: {
     ...Typography.h3,
+    fontSize: 16,
+    lineHeight: 22,
     color: Colors.textPrimary,
+    fontWeight: "700",
   },
-  dailyCard: {
-    padding: Spacing.sm,
-    gap: Spacing.xs,
-  },
-  dailyRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.sm,
-  },
-  dailyLeft: {
-    width: 70,
-    gap: 2,
-  },
-  dailyDayName: {
-    ...Typography.bodySmall,
-    color: Colors.textSecondary,
-    fontWeight: "500",
-  },
-  dailyDayNameActive: {
-    color: Colors.primary,
-    fontWeight: "600",
-  },
-  dailyDate: {
-    ...Typography.caption,
-    color: Colors.textSecondary,
-  },
-  dailyBarContainer: {
-    flex: 1,
-    height: 20,
-    backgroundColor: Colors.border + "60",
-    borderRadius: Radius.sm,
+  chartCard: {
+    padding: Spacing.md,
+    gap: Spacing.md,
     overflow: "hidden",
-  },
-  dailyBar: {
-    height: "100%",
-    borderRadius: Radius.sm,
-    minWidth: 2,
-  },
-  dailyAmount: {
-    ...Typography.bodySmall,
-    color: Colors.textPrimary,
-    fontWeight: "500",
-    width: 80,
-    textAlign: "right",
-  },
-  dailyAmountZero: {
-    color: Colors.textSecondary,
   },
   categoryCard: {
     padding: Spacing.sm,
     gap: Spacing.md,
+    overflow: "hidden",
   },
   catRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: Spacing.md,
+    paddingHorizontal: Spacing.xs,
   },
   catIcon: {
-    fontSize: 16,
+    fontSize: 18,
   },
   catInfo: {
     flex: 1,
-    gap: 4,
+    gap: 6,
   },
   catHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "center",
   },
   catName: {
     ...Typography.bodyMedium,
     color: Colors.textPrimary,
+    fontWeight: "600",
   },
   catPct: {
     ...Typography.caption,
     color: Colors.textSecondary,
+    fontWeight: "600",
   },
   catBarBg: {
-    height: 6,
-    backgroundColor: Colors.border + "60",
-    borderRadius: 3,
+    height: 8,
+    backgroundColor: Colors.borderLight,
+    borderRadius: 4,
     overflow: "hidden",
   },
   catBarFill: {
     height: "100%",
-    borderRadius: 3,
+    borderRadius: 4,
   },
   catAmount: {
     ...Typography.bodySmall,
     color: Colors.textPrimary,
-    fontWeight: "500",
-    minWidth: 70,
+    fontWeight: "700",
+    minWidth: 72,
     textAlign: "right",
-  },
-  highlightsCard: {
-    padding: Spacing.sm,
-    gap: Spacing.sm,
-  },
-  incomeHero: {
-    color: Colors.success,
   },
   incomeAmount: {
     color: Colors.success,
   },
-  netPositive: {
-    color: Colors.success,
-  },
-  netNegative: {
-    color: Colors.error,
-  },
   netNote: {
     ...Typography.caption,
-    color: Colors.textSecondary,
+    color: Colors.textTertiary,
     paddingHorizontal: Spacing.xs,
-  },
-  highlightRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.md,
-  },
-  highlightInfo: {
-    flex: 1,
-  },
-  highlightLabel: {
-    ...Typography.caption,
-    color: Colors.textSecondary,
-  },
-  highlightValue: {
-    ...Typography.bodyMedium,
-    color: Colors.textPrimary,
-    fontWeight: "500",
-  },
-  highlightAmount: {
-    ...Typography.bodyMedium,
-    color: Colors.textPrimary,
-    fontWeight: "600",
   },
   highlightDivider: {
     height: 1,
-    backgroundColor: Colors.border,
+    backgroundColor: Colors.borderLight,
+    marginHorizontal: Spacing.sm,
   },
   compareCard: {
     padding: Spacing.base,
+    gap: Spacing.md,
   },
   compareRow: {
     flexDirection: "row",
@@ -1530,13 +1419,15 @@ const styles = StyleSheet.create({
   },
   compareDivider: {
     width: 1,
-    backgroundColor: Colors.border,
+    backgroundColor: Colors.borderLight,
     alignSelf: "stretch",
     marginHorizontal: Spacing.base,
   },
   compareLabel: {
     ...Typography.caption,
     color: Colors.textSecondary,
+    textTransform: "uppercase",
+    letterSpacing: 0.3,
   },
   compareAmount: {
     ...Typography.amountSmall,
@@ -1559,3 +1450,4 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
   },
 });
+

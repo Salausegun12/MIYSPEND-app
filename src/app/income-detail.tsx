@@ -5,7 +5,6 @@ import {
   StyleSheet,
   Pressable,
   ScrollView,
-  Alert,
   ActivityIndicator,
   Platform,
 } from "react-native";
@@ -17,6 +16,7 @@ import { useSQLiteContext } from "expo-sqlite";
 import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { Input } from "../components/ui/Input";
 import { Button } from "../components/ui/Button";
+import { usePopup } from "../components/popup/PopupProvider";
 import { AnimatedEntry } from "../components/ui/AnimatedEntry";
 import { Card } from "../components/ui/Card";
 import { Colors } from "../constants/colors";
@@ -85,6 +85,7 @@ export default function IncomeDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const db = useSQLiteContext();
+  const popup = usePopup();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -190,42 +191,35 @@ export default function IncomeDetailScreen() {
 
       setEditing(false);
       await loadIncome();
-      Alert.alert("Success", "Income updated successfully");
+      popup.success("Income updated successfully");
     } catch (e) {
       console.warn("Failed to update income:", e);
-      Alert.alert("Error", "Failed to update income. Please try again.");
+      popup.error("Failed to update income. Please try again.");
     } finally {
       savingRef.current = false;
       setSaving(false);
     }
   }
 
-  function handleDelete() {
+  async function handleDelete() {
     if (!income || deleting) return;
-    Alert.alert(
+    const confirmed = await popup.confirm(
       "Delete Income",
       "Are you sure you want to delete this income? This action cannot be undone.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            if (deleting) return;
-            setDeleting(true);
-            try {
-              await deleteIncome(db, income.id);
-              router.back();
-            } catch (e) {
-              console.warn("Failed to delete income:", e);
-              Alert.alert("Error", "Failed to delete income.");
-            } finally {
-              setDeleting(false);
-            }
-          },
-        },
-      ]
+      { destructive: true, confirmText: "Delete" }
     );
+    if (!confirmed || !income || deleting) return;
+
+    setDeleting(true);
+    try {
+      await deleteIncome(db, income.id);
+      router.back();
+    } catch (e) {
+      console.warn("Failed to delete income:", e);
+      popup.error("Failed to delete income.");
+    } finally {
+      setDeleting(false);
+    }
   }
 
   function onDateChange(event: DateTimePickerEvent, selectedDate?: Date) {

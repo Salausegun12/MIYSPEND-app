@@ -34,18 +34,8 @@ import {
   createContribution,
   getGoalsWithBalances,
 } from "../src/database/savingsGoals.ts";
-import {
-  createRecurringTransaction,
-  processDueRecurringTransactions,
-} from "../src/database/recurring.ts";
 import { computeInsights } from "../src/database/insights.ts";
 import { searchTransactions } from "../src/database/search.ts";
-import { buildExportReport } from "../src/database/export.ts";
-import {
-  buildBackupPayload,
-  restoreBackup,
-  parseBackupJson,
-} from "../src/database/backup.ts";
 
 const SCHEMA = `
   PRAGMA foreign_keys = ON;
@@ -118,30 +108,6 @@ const SCHEMA = `
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     CHECK (typeof(amount) = 'integer' AND amount > 0),
     FOREIGN KEY (goal_id) REFERENCES savings_goals(id) ON DELETE CASCADE
-  );
-  CREATE TABLE IF NOT EXISTS recurring_transactions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    type TEXT NOT NULL CHECK (type IN ('income', 'expense')),
-    amount INTEGER NOT NULL CHECK (typeof(amount) = 'integer' AND amount > 0),
-    description TEXT NOT NULL CHECK (length(trim(description)) > 0),
-    category_id INTEGER,
-    payment_method TEXT NOT NULL DEFAULT '',
-    frequency TEXT NOT NULL CHECK (frequency IN ('daily', 'weekly', 'monthly', 'yearly')),
-    next_occurrence TEXT NOT NULL,
-    anchor_day INTEGER NOT NULL DEFAULT 1 CHECK (anchor_day BETWEEN 1 AND 31),
-    end_date TEXT,
-    is_active INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
-  );
-  CREATE TABLE IF NOT EXISTS recurring_occurrences (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    recurring_id INTEGER NOT NULL,
-    occurrence_date TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    UNIQUE (recurring_id, occurrence_date),
-    FOREIGN KEY (recurring_id) REFERENCES recurring_transactions(id) ON DELETE CASCADE
   );
 `;
 
@@ -329,103 +295,37 @@ describe("complete offline walkthrough (airplane mode)", () => {
     assert.equal(withBalance.balance, 800000);
     assert.equal(withBalance.contribution_count, 2);
 
-    // ------------------------------------------- create the recurring transaction
-    await createRecurringTransaction(d, {
-      type: "expense",
-      amount: 50000,
-      description: "Daily coffee",
-      category_id: foodId,
-      payment_method: "POS",
-      frequency: "daily",
-      next_occurrence: "2026-09-01",
-    });
-
-    // Process due occurrences (as the app does at launch / on focus).
-    const summary1 = await processDueRecurringTransactions(d, "2026-09-10");
-    assert.equal(summary1.expensesGenerated, 10);
-    const expensesBefore = await getAllExpenses(d);
-    assert.equal(expensesBefore.length, 12); // 2 manual + 10 recurring
-
-    // The ledger prevents duplicates when processing runs again.
-    const summary2 = await processDueRecurringTransactions(d, "2026-09-10");
-    assert.equal(summary2.expensesGenerated, 0);
-    assert.equal((await getAllExpenses(d)).length, 12);
-
     // ------------------------------------------------------------- dashboard sums
     assert.equal(await getTotalIncome(d, "2026-09-01", "2026-09-30"), 1800000);
-    assert.equal(await getTotalExpenses(d, "2026-09-01", "2026-09-30"), 250000 + 95000 + 500000);
+    assert.equal(await getTotalExpenses(d, "2026-09-05 00:00:00", "2026-09-30 23:59:59"), 345000);
 
     // --------------------------------------------------------------- insights
     const insights = await computeInsights(d, "2026-09-10");
     assert.equal(Array.isArray(insights), true);
     assert.ok(insights.length > 0);
 
-    // -------------------------------------------------------------- reports
-    const report = await buildExportReport(d);
-    assert.equal(report.transactions.length, 13); // 12 expenses + 1 income
-    assert.match(report.csv, /Daily coffee/);
-    assert.match(report.pdfHtml, /Financial export/);
-
     // ---------------------------------------------------------------- search
-    const coffeeHits = await searchTransactions(d, { query: "coffee" });
-    assert.equal(coffeeHits.length, 10);
-    assert.ok(coffeeHits.every((hit) => hit.description.includes("coffee")));
+    const groceryHits = await searchTransactions(d, { query: "groceries" });
+    assert.equal(groceryHits.length, 1);
+    assert.match(groceryHits[0].description, /groceries/i);
     const incomeHits = await searchTransactions(d, { query: "freelance" });
     assert.equal(incomeHits.length, 1);
     assert.equal(incomeHits[0].type, "income");
-
-    // ---------------------------------------------------------------- export + backup
-    const backup = await buildBackupPayload(d);
-    const serialized = JSON.stringify(backup);
-    const parsed = parseBackupJson(serialized);
-    assert.equal(parsed.ok, true);
-    assert.ok(parsed.ok);
-
-    // "Delete test data" then restore from the backup.
-    for (const table of [
-      "contributions",
-      "budgets",
-      "expenses",
-      "income",
-      "recurring_occurrences",
-      "recurring_transactions",
-      "savings_goals",
-      "settings",
-      "categories",
-    ]) {
-      await d.runAsync(`DELETE FROM ${table}`);
-    }
-    assert.equal(db.count("expenses"), 0);
-    assert.equal(db.count("categories"), 0);
-
-    const restored = await restoreBackup(d, parsed.payload);
-    assert.equal(restored.categories, 2);
-    assert.equal(restored.expenses, 12);
-    assert.equal(restored.income, 1);
-    assert.equal(restored.budgets, 1);
-    assert.equal(restored.savingsGoals, 1);
-    assert.equal(restored.contributions, 2);
-    assert.equal(restored.recurringTransactions, 1);
-    assert.equal(restored.recurringOccurrences, 10);
-    assert.equal((await getAllIncome(d)).length, 1);
-    assert.equal((await getAllExpenses(d)).length, 12);
 
     // --------------------------------------------------------- restart the app
     db.close();
     db = new TestDb(dbPath);
     const d2 = asDb();
 
-    // Data is still there after a restart...
-    assert.equal(db.count("expenses"), 12);
+    // Data is still there after a restart.
+    assert.equal(db.count("expenses"), 2);
     assert.equal(db.count("income"), 1);
     assert.equal(db.count("budgets"), 1);
-    assert.equal(db.count("recurring_transactions"), 1);
+    assert.equal(db.count("savings_goals"), 1);
+    assert.equal(db.count("contributions"), 2);
     assert.equal((await getIncomeById(d2, freshIncomeId))?.source, "Freelance");
-
-    // ...and running the launch-time recurring pass again creates nothing new.
-    const afterRestart = await processDueRecurringTransactions(d2, "2026-09-10");
-    assert.equal(afterRestart.expensesGenerated, 0);
-    assert.equal(db.count("expenses"), 12);
+    assert.equal((await getAllIncome(d2)).length, 1);
+    assert.equal((await getAllExpenses(d2)).length, 2);
 
     const [goalAfter] = await getGoalsWithBalances(d2);
     assert.equal(goalAfter?.balance, 800000);

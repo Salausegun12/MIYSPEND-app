@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   Pressable,
-  Alert,
   Platform,
   KeyboardAvoidingView,
   ActivityIndicator,
@@ -18,6 +17,7 @@ import { AnimatedEntry } from "../components/ui/AnimatedEntry";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { Input } from "../components/ui/Input";
+import { usePopup } from "../components/popup/PopupProvider";
 import { Colors } from "../constants/colors";
 import { Spacing } from "../constants/spacing";
 import { Pressed } from "../constants/motion";
@@ -42,6 +42,7 @@ import type { BudgetWithCategory, Category } from "../types/database";
 export default function BudgetFormScreen() {
   const db = useSQLiteContext();
   const router = useRouter();
+  const popup = usePopup();
   const { id } = useLocalSearchParams<{ id?: string }>();
   const budgetId = id ? Number(id) : null;
   const isEditing = budgetId !== null && !Number.isNaN(budgetId);
@@ -129,46 +130,36 @@ export default function BudgetFormScreen() {
       }
 
       const name = selectedCategory?.name ?? "";
-      Alert.alert(
-        isEditing ? "Budget Updated" : "Budget Created",
+      popup.success(
         isEditing
           ? "Your monthly limit has been saved."
-          : `You can now track your ${name} spending each month.`,
-        [{ text: "OK", onPress: () => router.back() }]
+          : `You can now track your ${name} spending each month.`
       );
+      router.back();
     } catch (e) {
       console.warn("Failed to save budget:", e);
-      Alert.alert(
-        "Error",
-        e instanceof Error ? e.message : "Failed to save budget."
-      );
+      popup.error(e instanceof Error ? e.message : "Failed to save budget.");
     } finally {
       setSaving(false);
     }
   }
 
-  function handleDelete() {
+  async function handleDelete() {
     if (!budget) return;
-    Alert.alert(
+    const confirmed = await popup.confirm(
       "Delete Budget",
       "Remove this monthly limit? Your expenses will not be affected.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await deleteBudget(db, budget.id);
-              router.back();
-            } catch (e) {
-              console.warn("Failed to delete budget:", e);
-              Alert.alert("Error", "Failed to delete budget.");
-            }
-          },
-        },
-      ]
+      { destructive: true, confirmText: "Delete" }
     );
+    if (!confirmed || !budget) return;
+
+    try {
+      await deleteBudget(db, budget.id);
+      router.back();
+    } catch (e) {
+      console.warn("Failed to delete budget:", e);
+      popup.error("Failed to delete budget.");
+    }
   }
 
   function renderHeader(title: string) {

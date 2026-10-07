@@ -6,8 +6,8 @@ import { useSQLiteContext } from "expo-sqlite";
 import * as SplashScreen from "expo-splash-screen";
 import { Colors } from "../constants/colors";
 import { DatabaseProvider } from "../database/DatabaseProvider";
+import { PopupProvider } from "../components/popup/PopupProvider";
 import { isOnboardingComplete } from "../utils/user";
-import { processDueRecurringTransactions } from "../database/recurring";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -32,12 +32,6 @@ function RootNavigator() {
         } else if (complete && inOnboarding) {
           router.replace("/(tabs)" as Href);
         }
-
-        // Materialise any recurring transactions that came due since the last
-        // launch. Purely local; never touches banks or the network.
-        processDueRecurringTransactions(db).catch((e) => {
-          console.warn("Failed to process recurring transactions:", e);
-        });
       } catch (e) {
         console.warn("Onboarding check failed:", e);
       } finally {
@@ -92,10 +86,6 @@ function RootNavigator() {
         options={{ presentation: "modal", animation: "slide_from_bottom" }}
       />
       <Stack.Screen
-        name="budget"
-        options={{ presentation: "modal", animation: "slide_from_bottom" }}
-      />
-      <Stack.Screen
         name="budget-form"
         options={{ presentation: "modal", animation: "slide_from_bottom" }}
       />
@@ -108,23 +98,7 @@ function RootNavigator() {
         options={{ presentation: "modal", animation: "slide_from_bottom" }}
       />
       <Stack.Screen
-        name="recurring"
-        options={{ presentation: "modal", animation: "slide_from_bottom" }}
-      />
-      <Stack.Screen
-        name="recurring-form"
-        options={{ presentation: "modal", animation: "slide_from_bottom" }}
-      />
-      <Stack.Screen
         name="search"
-        options={{ presentation: "modal", animation: "slide_from_bottom" }}
-      />
-      <Stack.Screen
-        name="export"
-        options={{ presentation: "modal", animation: "slide_from_bottom" }}
-      />
-      <Stack.Screen
-        name="backup"
         options={{ presentation: "modal", animation: "slide_from_bottom" }}
       />
       <Stack.Screen name="onboarding" options={{ animation: "fade" }} />
@@ -135,8 +109,10 @@ function RootNavigator() {
 export default function RootLayout() {
   return (
     <DatabaseProvider>
-      <StatusBar style="dark" />
-      <RootNavigator />
+      <PopupProvider>
+        <StatusBar style="dark" />
+        <RootNavigator />
+      </PopupProvider>
     </DatabaseProvider>
   );
 }

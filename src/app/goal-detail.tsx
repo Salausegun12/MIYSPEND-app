@@ -6,7 +6,6 @@ import {
   ScrollView,
   Pressable,
   TextInput,
-  Alert,
   ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -23,6 +22,7 @@ import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { Divider } from "../components/ui/Divider";
 import { EmptyState } from "../components/ui/EmptyState";
+import { usePopup } from "../components/popup/PopupProvider";
 import { Colors } from "../constants/colors";
 import { Radius } from "../constants/radius";
 import { Spacing } from "../constants/spacing";
@@ -42,6 +42,7 @@ import type { Contribution, SavingsGoalWithBalance } from "../types/database";
 export default function GoalDetailScreen() {
   const db = useSQLiteContext();
   const router = useRouter();
+  const popup = usePopup();
   const { id } = useLocalSearchParams<{ id?: string }>();
   const goalId = Number(id);
 
@@ -102,56 +103,44 @@ export default function GoalDetailScreen() {
     }
   }
 
-  function confirmDeleteContribution(contribution: Contribution) {
-    Alert.alert(
+  async function confirmDeleteContribution(contribution: Contribution) {
+    const confirmed = await popup.confirm(
       "Delete Contribution",
       `Remove ${formatKoboAmount(contribution.amount)} from ${goal?.name ?? "this goal"}?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await deleteContribution(db, contribution.id);
-              load();
-            } catch (e) {
-              console.warn("Failed to delete contribution:", e);
-              Alert.alert("Error", "Failed to delete contribution.");
-            }
-          },
-        },
-      ]
+      { destructive: true, confirmText: "Delete" }
     );
+    if (!confirmed) return;
+
+    try {
+      await deleteContribution(db, contribution.id);
+      load();
+    } catch (e) {
+      console.warn("Failed to delete contribution:", e);
+      popup.error("Failed to delete contribution.");
+    }
   }
 
-  function confirmDeleteGoal() {
+  async function confirmDeleteGoal() {
     if (!goal) return;
-    Alert.alert(
+    const confirmed = await popup.confirm(
       "Delete Goal",
       `Delete ${goal.name}? Its ${contributions.length} ${
         contributions.length === 1 ? "contribution" : "contributions"
       } will be removed too. This cannot be undone.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await deleteGoal(db, goal.id);
-              // Drop the detail screen too, so back does not land on a
-              // deleted goal.
-              router.dismissAll();
-              router.push("/goals" as Href);
-            } catch (e) {
-              console.warn("Failed to delete goal:", e);
-              Alert.alert("Error", "Failed to delete goal.");
-            }
-          },
-        },
-      ]
+      { destructive: true, confirmText: "Delete" }
     );
+    if (!confirmed) return;
+
+    try {
+      await deleteGoal(db, goal.id);
+      // Drop the detail screen too, so back does not land on a
+      // deleted goal.
+      router.dismissAll();
+      router.push("/goals" as Href);
+    } catch (e) {
+      console.warn("Failed to delete goal:", e);
+      popup.error("Failed to delete goal.");
+    }
   }
 
   if (loading) {

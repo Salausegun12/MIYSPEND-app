@@ -7,6 +7,7 @@ import {
   ViewStyle,
   TextStyle,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { Colors } from "../../constants/colors";
 import { Radius } from "../../constants/radius";
 import { Shadows } from "../../constants/shadows";
@@ -67,6 +68,18 @@ export function Button({
       accessibilityLabel={title}
       accessibilityState={{ disabled: isDisabled, busy: loading }}
     >
+      {!isDisabled && variant !== "secondary" && (
+        <LinearGradient
+          colors={
+            variant === "primary"
+              ? Colors.gradient.primary
+              : Colors.gradient.danger
+          }
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.gradientFill}
+        />
+      )}
       {loading ? (
         <ActivityIndicator
           color={variant === "primary" ? Colors.surface : Colors.primary}
@@ -95,6 +108,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: Spacing.xl,
+    overflow: "hidden",
+  },
+  gradientFill: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    borderRadius: Radius.lg,
   },
   primary: {
     backgroundColor: Colors.primary,

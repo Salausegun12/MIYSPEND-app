@@ -378,6 +378,24 @@ export async function getGoalBalance(db: SQLiteDatabase, goalId: number): Promis
   return row?.balance ?? 0;
 }
 
+/**
+ * How much was contributed inside a plain YYYY-MM-DD range. Report generation
+ * uses this to say how much the user saved during the reported period.
+ * `contribution.date` is a plain date column, so plain dates bound it.
+ */
+export async function getContributionsInPeriod(
+  db: SQLiteDatabase,
+  startDate: string,
+  endDate: string
+): Promise<{ total: number; count: number }> {
+  const row = await db.getFirstAsync<{ total: number | null; count: number }>(
+    "SELECT COALESCE(SUM(amount), 0) as total, COUNT(*) as count FROM contributions WHERE date BETWEEN ? AND ?",
+    startDate,
+    endDate
+  );
+  return { total: Number(row?.total ?? 0), count: Number(row?.count ?? 0) };
+}
+
 export async function getTotalContributed(
   db: SQLiteDatabase,
   goalId: number

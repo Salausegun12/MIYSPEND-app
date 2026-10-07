@@ -1,5 +1,4 @@
 import type { SQLiteDatabase } from "expo-sqlite";
-import { RECURRING_SCHEMA_SQL } from "./recurring";
 
 const CURRENT_DB_VERSION = 7;
 
@@ -168,8 +167,10 @@ const MIGRATIONS: Record<number, (db: SQLiteDatabase) => Promise<void>> = {
         ON contributions(date);
     `);
   },
-  7: async (db) => {
-    await db.execAsync(RECURRING_SCHEMA_SQL);
+  7: async () => {
+    // Recurring transactions schema once lived here (v7). The feature has been
+    // removed; the migration is kept as a no-op so existing databases that
+    // already ran v7 keep working and new ones skip the unused tables.
   },
 };
 

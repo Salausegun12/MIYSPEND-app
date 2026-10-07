@@ -8,3 +8,7 @@ export { IconContainer } from "./IconContainer";
 export { Divider } from "./Divider";
 export { EmptyState } from "./EmptyState";
 export { AnimatedEntry } from "./AnimatedEntry";
+export { Dialog } from "./Dialog";
+export type { DialogConfig, DialogButton, PopupType } from "./Dialog";
+export { Toast } from "./Toast";
+export type { ToastConfig } from "./Toast";

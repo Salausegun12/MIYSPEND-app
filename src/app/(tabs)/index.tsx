@@ -9,23 +9,28 @@ import {
 } from "react-native";
 import { useRouter, Href, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { useSQLiteContext } from "expo-sqlite";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Card } from "../../components/ui/Card";
-import { Button } from "../../components/ui/Button";
 import { AnimatedEntry } from "../../components/ui/AnimatedEntry";
 import { IconContainer } from "../../components/ui/IconContainer";
+import { BarChart, type BarChartItem } from "../../components/charts/BarChart";
+import { PieChart } from "../../components/charts/PieChart";
+import { LineChart } from "../../components/charts/LineChart";
 import { Colors } from "../../constants/colors";
 import { Typography } from "../../constants/typography";
 import { Spacing } from "../../constants/spacing";
 import { Pressed } from "../../constants/motion";
+import { Radius } from "../../constants/radius";
+import { Shadows } from "../../constants/shadows";
 import {
   getTotalExpenses,
   getAllExpenses,
   getTodayExpenseCount,
+  getExpensesByDateRange,
 } from "../../database/expenses";
 import { getTotalIncome, getAllIncome } from "../../database/income";
-import { processDueRecurringTransactions } from "../../database/recurring";
 import {
   getTodayString,
   getWeekStart,
@@ -33,6 +38,8 @@ import {
   getMonthStart,
   getMonthEnd,
   getGreeting,
+  getWeekDays,
+  getDayOfWeek,
 } from "../../utils/date";
 import { formatKoboAmount, formatSignedKoboAmount } from "../../utils/money";
 import {
@@ -42,46 +49,60 @@ import {
 import { getUserName } from "../../utils/user";
 import type { ExpenseWithCategory, Income, IncomeSource } from "../../types/database";
 
-interface PeriodSummary {
+interface StatTileProps {
   label: string;
   income: number;
   expenses: number;
-  caption?: string;
+  children?: React.ReactNode;
 }
 
-function PeriodBlock({ label, income, expenses, caption }: PeriodSummary) {
+const PERIOD_TINTS: Record<string, { background: string; color: string }> = {
+  Today: { background: Colors.accent.goldSoft, color: Colors.accent.gold },
+  "This Week": { background: Colors.accent.skySoft, color: Colors.accent.sky },
+  "This Month": {
+    background: Colors.accent.violetSoft,
+    color: Colors.accent.violet,
+  },
+};
+
+function StatTile({ label, income, expenses, children }: StatTileProps) {
   const net = income - expenses;
+  const isPositive = net >= 0;
+  const tint = PERIOD_TINTS[label];
   return (
-    <View style={styles.summaryBlock}>
-      <Text style={styles.summaryPeriod}>{label}</Text>
-      <View style={styles.summaryRows}>
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>Income</Text>
-          <Text style={[styles.summaryValue, styles.incomeValue]}>
-            {formatKoboAmount(income)}
-          </Text>
+    <View style={styles.statTile}>
+      <Text
+        style={[
+          styles.statPeriod,
+          tint && { backgroundColor: tint.background, color: tint.color },
+        ]}
+      >
+        {label}
+      </Text>
+      <View style={styles.statBody}>
+        <View style={styles.statRows}>
+          <View style={styles.statRow}>
+            <View style={styles.statDot} />
+            <Text style={styles.statLabel}>Income</Text>
+            <Text style={[styles.statValue, styles.incomeValue]}>
+              {formatKoboAmount(income)}
+            </Text>
+          </View>
+          <View style={styles.statRow}>
+            <View style={[styles.statDot, styles.statDotExpense]} />
+            <Text style={styles.statLabel}>Expenses</Text>
+            <Text style={[styles.statValue, styles.expenseValue]}>
+              {formatKoboAmount(expenses)}
+            </Text>
+          </View>
+          <View style={[styles.statRow, styles.statNetRow]}>
+            <Text style={[styles.statNetLabel, isPositive ? styles.netPositive : styles.netNegative]}>
+              Net {isPositive ? "▲" : "▼"} {formatSignedKoboAmount(net)}
+            </Text>
+          </View>
         </View>
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>Expenses</Text>
-          <Text style={[styles.summaryValue, styles.expenseValue]}>
-            {formatKoboAmount(expenses)}
-          </Text>
-        </View>
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>Net</Text>
-          <Text
-            style={[
-              styles.summaryValue,
-              net >= 0 ? styles.netPositive : styles.netNegative,
-            ]}
-          >
-            {formatSignedKoboAmount(net)}
-          </Text>
-        </View>
+        {children ? <View style={styles.statChart}>{children}</View> : null}
       </View>
-      {caption ? (
-        <Text style={styles.summaryCaption}>{caption}</Text>
-      ) : null}
     </View>
   );
 }
@@ -98,11 +119,11 @@ export default function HomeScreen() {
   const [monthIncome, setMonthIncome] = useState(0);
   const [monthExpense, setMonthExpense] = useState(0);
   const [todayCount, setTodayCount] = useState(0);
-  const [recentExpenses, setRecentExpenses] = useState<ExpenseWithCategory[]>(
-    []
-  );
+  const [recentExpenses, setRecentExpenses] = useState<ExpenseWithCategory[]>([]);
   const [recentIncomes, setRecentIncomes] = useState<Income[]>([]);
   const [userName, setUserName] = useState<string | null>(null);
+  const [weekBars, setWeekBars] = useState<BarChartItem[]>([]);
+  const [monthDaily, setMonthDaily] = useState<number[]>([]);
 
   const loadData = useCallback(async () => {
     try {
@@ -111,9 +132,6 @@ export default function HomeScreen() {
       const weekEnd = getWeekEnd();
       const monthStart = getMonthStart();
       const monthEnd = getMonthEnd();
-
-      // Record any recurring income/expenses that came due since last focus.
-      await processDueRecurringTransactions(db);
 
       const [
         todaysIncome,
@@ -126,9 +144,8 @@ export default function HomeScreen() {
         recentExp,
         recentInc,
         name,
+        monthExpenses,
       ] = await Promise.all([
-        // Income stores a plain YYYY-MM-DD income_date, so it is queried with
-        // plain date bounds while expenses keep their datetime bounds.
         getTotalIncome(db, today, today),
         getTotalExpenses(db, `${today} 00:00:00`, `${today} 23:59:59`),
         getTotalIncome(db, weekStart, weekEnd),
@@ -139,6 +156,11 @@ export default function HomeScreen() {
         getAllExpenses(db, 5),
         getAllIncome(db, 5),
         getUserName(db),
+        getExpensesByDateRange(
+          db,
+          `${monthStart} 00:00:00`,
+          `${monthEnd} 23:59:59`
+        ),
       ]);
 
       setTodayIncome(todaysIncome);
@@ -151,6 +173,34 @@ export default function HomeScreen() {
       setRecentExpenses(recentExp);
       setRecentIncomes(recentInc);
       setUserName(name);
+
+      const totalsByDate = new Map<string, number>();
+      for (const expense of monthExpenses) {
+        const key = expense.date.slice(0, 10);
+        totalsByDate.set(key, (totalsByDate.get(key) ?? 0) + expense.amount);
+      }
+
+      const weekDates = getWeekDays(weekStart);
+      setWeekBars(
+        weekDates.map((date) => ({
+          id: date,
+          label: getDayOfWeek(date),
+          value: totalsByDate.get(date.slice(0, 10)) ?? 0,
+        }))
+      );
+
+      const monthPrefix = monthStart.slice(0, 8);
+      const daysInMonth = new Date(
+        Number(monthStart.slice(0, 4)),
+        Number(monthStart.slice(5, 7)),
+        0
+      ).getDate();
+      setMonthDaily(
+        Array.from({ length: daysInMonth }, (_, index) => {
+          const day = `${monthPrefix}${String(index + 1).padStart(2, "0")}`;
+          return totalsByDate.get(day) ?? 0;
+        })
+      );
     } catch (e) {
       console.warn("Failed to load dashboard data:", e);
     } finally {
@@ -177,6 +227,7 @@ export default function HomeScreen() {
 
   const hasExpenses = recentExpenses.length > 0;
   const hasIncome = recentIncomes.length > 0;
+  const monthNet = monthIncome - monthExpense;
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
@@ -185,237 +236,282 @@ export default function HomeScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
+        {/* ── Header ── */}
         <View style={styles.header}>
-          <Text style={styles.greeting}>
-            {getGreeting()}{userName ? `, ${userName}` : ""} 👋
-          </Text>
-          <Text style={styles.brand}>MiySpend</Text>
+          <View>
+            <Text style={styles.greeting}>{getGreeting()}{userName ? `, ${userName}` : ""} 👋</Text>
+            <Text style={styles.brand}>MiySpend</Text>
+          </View>
+          <Pressable
+            onPress={() => router.push("/search" as Href)}
+            style={({ pressed }) => [styles.searchBtn, pressed && styles.searchBtnPressed]}
+            accessibilityRole="button"
+            accessibilityLabel="Search transactions"
+          >
+            <Ionicons name="search-outline" size={20} color={Colors.primary} />
+          </Pressable>
         </View>
 
-        <AnimatedEntry delay={40} style={styles.overviewSection}>
-          <Card style={styles.summaryCard}>
-            <PeriodBlock
-              label="Today"
-              income={todayIncome}
-              expenses={todayExpense}
-              caption={`${todayCount} expense${
-                todayCount === 1 ? "" : "s"
-              } recorded today`}
-            />
-            <View style={styles.summaryDivider} />
-            <PeriodBlock
-              label="This Week"
-              income={weekIncome}
-              expenses={weekExpense}
-            />
-            <View style={styles.summaryDivider} />
-            <PeriodBlock
-              label="This Month"
-              income={monthIncome}
-              expenses={monthExpense}
-            />
-          </Card>
-          <Text style={styles.netNote}>
-            Net is income you recorded minus expenses you recorded. It is not
-            your bank balance.
-          </Text>
+        {/* ── Hero balance card ── */}
+        <AnimatedEntry delay={30}>
+          <LinearGradient
+            colors={Colors.gradient.hero}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.heroCard}
+          >
+            {/* Decorative circles */}
+            <View style={styles.heroBubble1} />
+            <View style={styles.heroBubble2} />
+            <View style={styles.heroBubble3} />
+
+            <Text style={styles.heroLabel}>This month's net</Text>
+            <Text style={[styles.heroAmount, monthNet < 0 && styles.heroAmountNeg]}>
+              {formatSignedKoboAmount(monthNet)}
+            </Text>
+            <View style={styles.heroStats}>
+              <View style={styles.heroStat}>
+                <Ionicons name="arrow-up-circle" size={14} color="#A8EDD7" />
+                <Text style={styles.heroStatLabel}>Income</Text>
+                <Text style={styles.heroStatValue}>{formatKoboAmount(monthIncome)}</Text>
+              </View>
+              <View style={styles.heroStatDivider} />
+              <View style={styles.heroStat}>
+                <Ionicons name="arrow-down-circle" size={14} color="#FFB4B4" />
+                <Text style={styles.heroStatLabel}>Expenses</Text>
+                <Text style={styles.heroStatValue}>{formatKoboAmount(monthExpense)}</Text>
+              </View>
+            </View>
+
+            <View style={styles.heroBadge}>
+              <Text style={styles.heroBadgeText}>
+                {todayCount} expense{todayCount === 1 ? "" : "s"} recorded today
+              </Text>
+            </View>
+          </LinearGradient>
         </AnimatedEntry>
 
-        {hasExpenses ? (
-          <View style={styles.recentSection}>
-            <View style={styles.recentHeader}>
+        {/* ── Quick actions ── */}
+        <AnimatedEntry delay={60}>
+          <View style={styles.quickActions}>
+            <Pressable
+              onPress={() => router.push("/add-expense" as Href)}
+              style={({ pressed }) => [styles.quickBtn, pressed && styles.quickBtnPressed]}
+              accessibilityRole="button"
+              accessibilityLabel="Add expense"
+            >
+              <LinearGradient
+                colors={Colors.gradient.sunset}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.quickBtnFill}
+              >
+                <Ionicons name="remove-circle-outline" size={22} color={Colors.white} />
+                <Text style={styles.quickBtnText} numberOfLines={1}>Add Expense</Text>
+              </LinearGradient>
+            </Pressable>
+            <Pressable
+              onPress={() => router.push("/add-income" as Href)}
+              style={({ pressed }) => [styles.quickBtn, pressed && styles.quickBtnPressed]}
+              accessibilityRole="button"
+              accessibilityLabel="Add income"
+            >
+              <LinearGradient
+                colors={Colors.gradient.mint}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.quickBtnFill}
+              >
+                <Ionicons name="add-circle-outline" size={22} color={Colors.white} />
+                <Text style={styles.quickBtnText} numberOfLines={1}>Add Income</Text>
+              </LinearGradient>
+            </Pressable>
+          </View>
+        </AnimatedEntry>
+
+        {/* ── Period summary ── */}
+        <AnimatedEntry delay={80}>
+          <Text style={styles.sectionTitle}>Period summary</Text>
+          <Card style={styles.periodCard}>
+            <StatTile label="Today" income={todayIncome} expenses={todayExpense}>
+              <PieChart
+                data={[
+                  {
+                    id: "income",
+                    label: "Income",
+                    value: todayIncome,
+                    color: Colors.success,
+                  },
+                  {
+                    id: "expenses",
+                    label: "Expenses",
+                    value: todayExpense,
+                    color: Colors.error,
+                  },
+                ]}
+                total={todayIncome + todayExpense}
+                centerLabel="Total"
+                formatValue={formatKoboAmount}
+                size={84}
+                stroke={14}
+                showLegend={false}
+              />
+            </StatTile>
+            <View style={styles.periodDivider} />
+            <StatTile label="This Week" income={weekIncome} expenses={weekExpense}>
+              <BarChart
+                compact
+                data={weekBars}
+                activeId={getTodayString()}
+                formatValue={formatKoboAmount}
+                color={Colors.accent.rose}
+                colorSoft="#FDA4AF"
+              />
+            </StatTile>
+            <View style={styles.periodDivider} />
+            <StatTile label="This Month" income={monthIncome} expenses={monthExpense}>
+              <LineChart
+                data={monthDaily}
+                height={64}
+                formatValue={formatKoboAmount}
+              />
+            </StatTile>
+          </Card>
+        </AnimatedEntry>
+
+        {/* ── Recent expenses ── */}
+        {hasExpenses && (
+          <AnimatedEntry delay={100}>
+            <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Recent expenses</Text>
               <Pressable
                 onPress={() => router.navigate("/(tabs)/history" as Href)}
-                style={({ pressed }) => [
-                  styles.seeAll,
-                  pressed && styles.seeAllPressed,
-                ]}
+                style={({ pressed }) => [styles.seeAll, pressed && styles.seeAllPressed]}
                 accessibilityRole="button"
                 accessibilityLabel="View all expenses"
               >
                 <Text style={styles.seeAllText}>See all</Text>
-                <Ionicons
-                  name="chevron-forward"
-                  size={16}
-                  color={Colors.primary}
-                />
+                <Ionicons name="chevron-forward" size={14} color={Colors.primary} />
               </Pressable>
             </View>
-            <Card style={styles.recentCard}>
+            <Card style={styles.listCard}>
               {recentExpenses.map((expense, index) => (
                 <React.Fragment key={expense.id}>
                   {index > 0 && <View style={styles.divider} />}
                   <Pressable
-                    onPress={() =>
-                      router.push(`/expense-detail?id=${expense.id}` as Href)
-                    }
-                    style={({ pressed }) => [
-                      styles.expenseRow,
-                      pressed && styles.expenseRowPressed,
-                    ]}
+                    onPress={() => router.push(`/expense-detail?id=${expense.id}` as Href)}
+                    style={({ pressed }) => [styles.txRow, pressed && styles.txRowPressed]}
                     accessibilityRole="button"
                     accessibilityLabel={`View ${expense.description} expense`}
                   >
-                    <IconContainer
-                      size={40}
-                      backgroundColor={expense.category_color + "20"}
-                    >
-                      <Text style={styles.expenseIcon}>
-                        {expense.category_icon}
-                      </Text>
+                    <IconContainer size={44} backgroundColor={expense.category_color + "1F"}>
+                      <Text style={styles.txIcon}>{expense.category_icon}</Text>
                     </IconContainer>
-                    <View style={styles.expenseInfo}>
-                      <Text style={styles.expenseName}>
-                        {expense.category_name}
-                      </Text>
-                      <Text style={styles.expenseDesc} numberOfLines={1}>
-                        {expense.description}
-                      </Text>
+                    <View style={styles.txInfo}>
+                      <Text style={styles.txName}>{expense.category_name}</Text>
+                      <Text style={styles.txDesc} numberOfLines={1}>{expense.description}</Text>
                     </View>
-                    <Text style={styles.expenseAmount}>
-                      {formatKoboAmount(expense.amount)}
-                    </Text>
+                    <View style={styles.txRight}>
+                      <Text style={styles.txAmount}>-{formatKoboAmount(expense.amount)}</Text>
+                      <Ionicons name="chevron-forward" size={14} color={Colors.textTertiary} />
+                    </View>
                   </Pressable>
                 </React.Fragment>
               ))}
             </Card>
-          </View>
-        ) : null}
+          </AnimatedEntry>
+        )}
 
-        {hasIncome ? (
-          <View style={styles.recentSection}>
-            <View style={styles.recentHeader}>
+        {/* ── Recent income ── */}
+        {hasIncome && (
+          <AnimatedEntry delay={120}>
+            <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Recent income</Text>
               <Pressable
                 onPress={() => router.push("/income-history" as Href)}
-                style={({ pressed }) => [
-                  styles.seeAll,
-                  pressed && styles.seeAllPressed,
-                ]}
+                style={({ pressed }) => [styles.seeAll, pressed && styles.seeAllPressed]}
                 accessibilityRole="button"
                 accessibilityLabel="View all income"
               >
                 <Text style={styles.seeAllText}>See all</Text>
-                <Ionicons
-                  name="chevron-forward"
-                  size={16}
-                  color={Colors.primary}
-                />
+                <Ionicons name="chevron-forward" size={14} color={Colors.primary} />
               </Pressable>
             </View>
-            <Card style={styles.recentCard}>
+            <Card style={styles.listCard}>
               {recentIncomes.map((income, index) => {
                 const source = income.source as IncomeSource;
-                const color =
-                  INCOME_SOURCE_COLORS[source] ?? Colors.primary;
+                const color = INCOME_SOURCE_COLORS[source] ?? Colors.primary;
                 return (
                   <React.Fragment key={income.id}>
                     {index > 0 && <View style={styles.divider} />}
                     <Pressable
-                      onPress={() =>
-                        router.push(`/income-detail?id=${income.id}` as Href)
-                      }
-                      style={({ pressed }) => [
-                        styles.expenseRow,
-                        pressed && styles.expenseRowPressed,
-                      ]}
+                      onPress={() => router.push(`/income-detail?id=${income.id}` as Href)}
+                      style={({ pressed }) => [styles.txRow, pressed && styles.txRowPressed]}
                       accessibilityRole="button"
-                      accessibilityLabel={`View ${source} income of ${formatKoboAmount(
-                        income.amount
-                      )}`}
+                      accessibilityLabel={`View ${source} income of ${formatKoboAmount(income.amount)}`}
                     >
-                      <IconContainer
-                        size={40}
-                        backgroundColor={color + "20"}
-                      >
+                      <IconContainer size={44} backgroundColor={color + "1F"}>
                         <Ionicons
-                          name={
-                            INCOME_SOURCE_ICONS[source] ?? "wallet-outline"
-                          }
-                          size={18}
+                          name={INCOME_SOURCE_ICONS[source] ?? "wallet-outline"}
+                          size={20}
                           color={color}
                         />
                       </IconContainer>
-                      <View style={styles.expenseInfo}>
-                        <Text style={styles.expenseName}>{source}</Text>
-                        <Text style={styles.expenseDesc} numberOfLines={1}>
-                          {income.note
-                            ? income.note
-                            : income.payment_method}
+                      <View style={styles.txInfo}>
+                        <Text style={styles.txName}>{source}</Text>
+                        <Text style={styles.txDesc} numberOfLines={1}>
+                          {income.note ? income.note : income.payment_method}
                         </Text>
                       </View>
-                      <Text style={styles.incomeAmount}>
-                        {formatKoboAmount(income.amount)}
-                      </Text>
+                      <View style={styles.txRight}>
+                        <Text style={[styles.txAmount, styles.incomeAmountText]}>
+                          +{formatKoboAmount(income.amount)}
+                        </Text>
+                        <Ionicons name="chevron-forward" size={14} color={Colors.textTertiary} />
+                      </View>
                     </Pressable>
                   </React.Fragment>
                 );
               })}
             </Card>
-          </View>
-        ) : null}
+          </AnimatedEntry>
+        )}
 
-        {!hasExpenses && !hasIncome ? (
-          <Card style={styles.emptyCard}>
-            <View style={styles.emptyContent}>
-              <View style={styles.emptyIcon}>
-                <Ionicons
-                  name="wallet-outline"
-                  size={40}
-                  color={Colors.primary}
-                />
+        {/* ── Empty state ── */}
+        {!hasExpenses && !hasIncome && (
+          <AnimatedEntry delay={100}>
+            <Card style={styles.emptyCard}>
+              <View style={styles.emptyIconWrap}>
+                <LinearGradient
+                  colors={Colors.gradient.primary}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.emptyIconGradient}
+                >
+                  <Ionicons name="wallet-outline" size={32} color={Colors.white} />
+                </LinearGradient>
               </View>
               <Text style={styles.emptyTitle}>Nothing recorded yet</Text>
               <Text style={styles.emptyMessage}>
-                Start recording your income and expenses to see your financial
-                activity here.
+                Start recording your income and expenses to see your financial activity here.
               </Text>
-            </View>
-          </Card>
-        ) : null}
+            </Card>
+          </AnimatedEntry>
+        )}
 
-        <View style={styles.buttonWrapper}>
-          <Button
-            title="+ Add Expense"
-            onPress={() => router.push("/add-expense" as Href)}
-          />
-          <Button
-            title="+ Add Income"
-            variant="secondary"
-            onPress={() => router.push("/add-income" as Href)}
-          />
-          <Pressable
-            onPress={() => router.push("/recurring" as Href)}
-            style={({ pressed }) => [
-              styles.incomeHistoryLink,
-              pressed && styles.seeAllPressed,
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel="Manage recurring transactions"
-          >
-            <Ionicons name="repeat-outline" size={16} color={Colors.primary} />
-            <Text style={styles.seeAllText}>Manage Recurring Transactions</Text>
-            <Ionicons name="chevron-forward" size={16} color={Colors.primary} />
-          </Pressable>
+        {/* ── Income history link ── */}
+        <AnimatedEntry delay={140}>
           <Pressable
             onPress={() => router.push("/income-history" as Href)}
-            style={({ pressed }) => [
-              styles.incomeHistoryLink,
-              pressed && styles.seeAllPressed,
-            ]}
+            style={({ pressed }) => [styles.incomeHistoryLink, pressed && styles.seeAllPressed]}
             accessibilityRole="button"
             accessibilityLabel="View income history"
           >
-            <Ionicons
-              name="trending-up-outline"
-              size={16}
-              color={Colors.primary}
-            />
+            <Ionicons name="trending-up-outline" size={16} color={Colors.primary} />
             <Text style={styles.seeAllText}>View Income History</Text>
-            <Ionicons name="chevron-forward" size={16} color={Colors.primary} />
+            <Ionicons name="chevron-forward" size={14} color={Colors.primary} />
           </Pressable>
-        </View>
+        </AnimatedEntry>
       </ScrollView>
     </SafeAreaView>
   );
@@ -438,56 +534,254 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: Colors.background,
   },
+
+  // Header
   header: {
     paddingTop: Spacing.base,
-    paddingBottom: Spacing.sm,
+    paddingBottom: Spacing.xs,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   greeting: {
-    ...Typography.body,
+    ...Typography.bodySmall,
     color: Colors.textSecondary,
+    marginBottom: 2,
   },
   brand: {
     ...Typography.h1,
     color: Colors.primary,
-    marginTop: Spacing.xs,
   },
-  overviewSection: {
+  searchBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: Colors.primarySoft,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  searchBtnPressed: Pressed.default,
+
+  // Hero card
+  heroCard: {
+    borderRadius: Radius.xxl,
+    padding: Spacing.xl,
+    overflow: "hidden",
+    gap: Spacing.xs,
+    ...Shadows.lg,
+  },
+  heroBubble1: {
+    position: "absolute",
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: "rgba(167,139,250,0.28)",
+    top: -40,
+    right: -30,
+  },
+  heroBubble2: {
+    position: "absolute",
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: "rgba(251,191,36,0.20)",
+    bottom: -20,
+    left: -20,
+  },
+  heroBubble3: {
+    position: "absolute",
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: "rgba(56,189,248,0.16)",
+    bottom: -45,
+    right: -25,
+  },
+  heroLabel: {
+    ...Typography.caption,
+    color: "rgba(255,255,255,0.65)",
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+  },
+  heroAmount: {
+    fontSize: 36,
+    fontWeight: "700",
+    color: Colors.white,
+    letterSpacing: -0.5,
+    marginTop: 2,
+  },
+  heroAmountNeg: {
+    color: "#FFB4B4",
+  },
+  heroStats: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: Spacing.md,
+    backgroundColor: "rgba(0,0,0,0.15)",
+    borderRadius: Radius.lg,
+    padding: Spacing.md,
+  },
+  heroStat: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  heroStatLabel: {
+    ...Typography.caption,
+    color: "rgba(255,255,255,0.65)",
+    flex: 1,
+  },
+  heroStatValue: {
+    ...Typography.caption,
+    color: Colors.white,
+    fontWeight: "600",
+  },
+  heroStatDivider: {
+    width: 1,
+    height: 24,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    marginHorizontal: Spacing.md,
+  },
+  heroBadge: {
+    alignSelf: "flex-start",
+    marginTop: Spacing.sm,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 3,
+  },
+  heroBadgeText: {
+    ...Typography.caption,
+    color: "rgba(255,255,255,0.8)",
+  },
+
+  // Quick actions
+  quickActions: {
+    flexDirection: "row",
     gap: Spacing.sm,
   },
-  summaryCard: {
-    gap: Spacing.md,
+  quickBtn: {
+    flex: 1,
+    height: 56,
+    borderRadius: Radius.lg,
+    overflow: "hidden",
+    ...Shadows.sm,
   },
-  summaryBlock: {
-    gap: Spacing.sm,
+  quickBtnFill: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingHorizontal: Spacing.sm,
   },
-  summaryPeriod: {
+  quickBtnPressed: Pressed.default,
+  quickBtnText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: Colors.white,
+    flexShrink: 1,
+  },
+
+  // Section
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: Spacing.xs,
+  },
+  sectionTitle: {
     ...Typography.h3,
     color: Colors.textPrimary,
   },
-  summaryRows: {
-    gap: Spacing.xs,
+  seeAll: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.xs,
   },
-  summaryRow: {
+  seeAllText: {
+    ...Typography.caption,
+    color: Colors.primary,
+    fontWeight: "700",
+  },
+  seeAllPressed: Pressed.default,
+
+  // Period stats card
+  periodCard: {
+    gap: 0,
+    padding: 0,
+    overflow: "hidden",
+  },
+  statTile: {
+    padding: Spacing.base,
+    gap: Spacing.sm,
+  },
+  statPeriod: {
+    ...Typography.label,
+    alignSelf: "flex-start",
+    color: Colors.textSecondary,
+    backgroundColor: Colors.borderLight,
+    borderRadius: 999,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
+    letterSpacing: 0.3,
+    overflow: "hidden",
+  },
+  statBody: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     gap: Spacing.md,
   },
-  summaryLabel: {
-    ...Typography.bodyMedium,
-    color: Colors.textSecondary,
+  statRows: {
+    flex: 1,
+    gap: Spacing.xs,
   },
-  summaryValue: {
-    ...Typography.bodyMedium,
+  statChart: {
+    width: 150,
+    alignItems: "center",
+  },
+  statRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+  },
+  statNetRow: {
+    marginTop: 2,
+  },
+  statDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.success,
+  },
+  statDotExpense: {
+    backgroundColor: Colors.accent.rose,
+  },
+  statLabel: {
+    ...Typography.bodySmall,
+    color: Colors.textSecondary,
+    flex: 1,
+  },
+  statValue: {
+    ...Typography.bodySmall,
+    color: Colors.textPrimary,
     fontWeight: "600",
   },
   incomeValue: {
     color: Colors.success,
   },
   expenseValue: {
-    color: Colors.textPrimary,
+    color: Colors.accent.rose,
+  },
+  statNetLabel: {
+    ...Typography.caption,
+    fontWeight: "700",
+    letterSpacing: 0.2,
   },
   netPositive: {
     color: Colors.success,
@@ -495,98 +789,74 @@ const styles = StyleSheet.create({
   netNegative: {
     color: Colors.error,
   },
-  summaryCaption: {
-    ...Typography.caption,
-    color: Colors.textSecondary,
-  },
-  summaryDivider: {
+  periodDivider: {
     height: 1,
-    backgroundColor: Colors.border,
+    backgroundColor: Colors.borderLight,
   },
-  netNote: {
-    ...Typography.caption,
-    color: Colors.textSecondary,
-    paddingHorizontal: Spacing.xs,
+
+  // Transaction rows
+  listCard: {
+    padding: 0,
+    overflow: "hidden",
   },
-  recentSection: {
-    gap: Spacing.sm,
-  },
-  recentHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  seeAll: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 2,
-    paddingVertical: Spacing.xs,
-  },
-  seeAllText: {
-    ...Typography.bodySmall,
-    color: Colors.primary,
-    fontWeight: "600",
-  },
-  seeAllPressed: Pressed.default,
-  sectionTitle: {
-    ...Typography.h3,
-    color: Colors.textPrimary,
-  },
-  recentCard: {
-    padding: Spacing.sm,
-  },
-  expenseRow: {
+  txRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: Spacing.md,
-    paddingVertical: Spacing.xs,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.base,
   },
-  expenseRowPressed: Pressed.default,
-  expenseIcon: {
-    fontSize: 18,
+  txRowPressed: Pressed.default,
+  txIcon: {
+    fontSize: 20,
   },
-  expenseInfo: {
+  txInfo: {
     flex: 1,
   },
-  expenseName: {
+  txName: {
     ...Typography.bodyMedium,
     color: Colors.textPrimary,
   },
-  expenseDesc: {
+  txDesc: {
     ...Typography.caption,
     color: Colors.textSecondary,
     marginTop: 2,
   },
-  expenseAmount: {
-    ...Typography.bodyMedium,
-    color: Colors.textPrimary,
-    fontWeight: "600",
+  txRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
   },
-  incomeAmount: {
-    ...Typography.bodyMedium,
+  txAmount: {
+    ...Typography.bodySmall,
+    color: Colors.textPrimary,
+    fontWeight: "700",
+  },
+  incomeAmountText: {
     color: Colors.success,
-    fontWeight: "600",
   },
   divider: {
     height: 1,
-    backgroundColor: Colors.border,
-    marginVertical: Spacing.xs,
+    backgroundColor: Colors.borderLight,
+    marginHorizontal: Spacing.base,
   },
+
+  // Empty state
   emptyCard: {
-    paddingVertical: Spacing.xxxl,
     alignItems: "center",
+    paddingVertical: Spacing.xxxl,
+    gap: Spacing.md,
   },
-  emptyIcon: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
-    backgroundColor: Colors.primarySoft,
+  emptyIconWrap: {
+    marginBottom: Spacing.xs,
+  },
+  emptyIconGradient: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     alignItems: "center",
     justifyContent: "center",
-  },
-  emptyContent: {
-    alignItems: "center",
-    gap: Spacing.sm,
+    ...Shadows.md,
   },
   emptyTitle: {
     ...Typography.h3,
@@ -599,16 +869,12 @@ const styles = StyleSheet.create({
     textAlign: "center",
     maxWidth: 260,
   },
-  buttonWrapper: {
-    marginTop: Spacing.sm,
-    gap: Spacing.sm,
-  },
+
   incomeHistoryLink: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 2,
-    paddingVertical: Spacing.xs,
-    marginTop: Spacing.xs,
+    gap: 4,
+    paddingVertical: Spacing.sm,
   },
 });

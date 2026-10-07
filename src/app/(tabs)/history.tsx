@@ -45,14 +45,15 @@ type FilterKey = "today" | "yesterday" | "thisWeek" | "lastWeek" | "thisMonth";
 interface FilterOption {
   key: FilterKey;
   label: string;
+  shortLabel: string;
 }
 
 const FILTERS: FilterOption[] = [
-  { key: "today", label: "Today" },
-  { key: "yesterday", label: "Yesterday" },
-  { key: "thisWeek", label: "This Week" },
-  { key: "lastWeek", label: "Last Week" },
-  { key: "thisMonth", label: "This Month" },
+  { key: "today", label: "Today", shortLabel: "Today" },
+  { key: "yesterday", label: "Yesterday", shortLabel: "Yesterday" },
+  { key: "thisWeek", label: "This Week", shortLabel: "This Week" },
+  { key: "lastWeek", label: "Last Week", shortLabel: "Last Week" },
+  { key: "thisMonth", label: "This Month", shortLabel: "This Month" },
 ];
 
 interface DateGroup {
@@ -148,6 +149,7 @@ export default function HistoryScreen() {
   }, []);
 
   const dateGroups = useMemo(() => groupByDate(expenses), [expenses]);
+  const totalAmount = useMemo(() => expenses.reduce((s, e) => s + e.amount, 0), [expenses]);
 
   if (loading) {
     return (
@@ -166,9 +168,17 @@ export default function HistoryScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
-      <AnimatedEntry delay={40}>
+      {/* ── Header ── */}
+      <AnimatedEntry delay={20}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>History</Text>
+          <View>
+            <Text style={styles.headerTitle}>History</Text>
+            {hasExpenses && (
+              <Text style={styles.headerSubtitle}>
+                {expenses.length} transaction{expenses.length !== 1 ? "s" : ""} · {formatKoboAmount(totalAmount)}
+              </Text>
+            )}
+          </View>
           <Pressable
             onPress={() => router.push("/search" as Href)}
             style={({ pressed }) => [styles.searchButton, pressed && styles.searchButtonPressed]}
@@ -176,11 +186,12 @@ export default function HistoryScreen() {
             accessibilityLabel="Search transactions"
             hitSlop={8}
           >
-            <Ionicons name="search" size={22} color={Colors.textPrimary} />
+            <Ionicons name="search" size={20} color={Colors.primary} />
           </Pressable>
         </View>
       </AnimatedEntry>
 
+      {/* ── Filter chips ── */}
       <View style={styles.filterBar}>
         <ScrollView
           horizontal
@@ -202,13 +213,8 @@ export default function HistoryScreen() {
                 accessibilityState={{ selected: active }}
                 accessibilityLabel={`Filter expenses by ${filter.label}`}
               >
-                <Text
-                  style={[
-                    styles.filterLabel,
-                    active && styles.filterLabelActive,
-                  ]}
-                >
-                  {filter.label}
+                <Text style={[styles.filterLabel, active && styles.filterLabelActive]}>
+                  {filter.shortLabel}
                 </Text>
               </Pressable>
             );
@@ -216,69 +222,74 @@ export default function HistoryScreen() {
         </ScrollView>
       </View>
 
+      {/* ── Content ── */}
       {hasExpenses ? (
         <ScrollView
           style={styles.flex}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {dateGroups.map((group) => (
-            <View key={group.dateLabel} style={styles.groupSection}>
-              <View style={styles.groupHeader}>
-                <Text style={styles.groupDateLabel}>{group.dateLabel}</Text>
-                <Text style={styles.groupTotal}>
-                  {formatKoboAmount(
-                    group.expenses.reduce((sum, e) => sum + e.amount, 0)
-                  )}
-                </Text>
-              </View>
-              <Card style={styles.groupCard}>
-                {group.expenses.map((expense, index) => (
-                  <React.Fragment key={expense.id}>
-                    {index > 0 && <View style={styles.divider} />}
-                    <Pressable
-                      onPress={() =>
-                        router.push(
-                          `/expense-detail?id=${expense.id}` as Href
-                        )
-                      }
-                       style={({ pressed }) => [
-                         styles.expenseRow,
-                         pressed && styles.expenseRowPressed,
-                       ]}
-                       accessibilityRole="button"
-                       accessibilityLabel={`View ${expense.description || expense.category_name} expense`}
-                    >
-                      <IconContainer
-                        size={40}
-                        backgroundColor={expense.category_color + "20"}
+          {dateGroups.map((group, gIdx) => (
+            <AnimatedEntry key={group.dateLabel} delay={gIdx * 30}>
+              <View style={styles.groupSection}>
+                <View style={styles.groupHeader}>
+                  <View style={styles.groupHeaderLeft}>
+                    <View style={styles.groupDateDot} />
+                    <Text style={styles.groupDateLabel}>{group.dateLabel}</Text>
+                  </View>
+                  <View style={styles.groupTotalBadge}>
+                    <Text style={styles.groupTotal}>
+                      {formatKoboAmount(group.expenses.reduce((s, e) => s + e.amount, 0))}
+                    </Text>
+                  </View>
+                </View>
+                <Card style={styles.groupCard}>
+                  {group.expenses.map((expense, index) => (
+                    <React.Fragment key={expense.id}>
+                      {index > 0 && <View style={styles.divider} />}
+                      <Pressable
+                        onPress={() =>
+                          router.push(`/expense-detail?id=${expense.id}` as Href)
+                        }
+                        style={({ pressed }) => [
+                          styles.expenseRow,
+                          pressed && styles.expenseRowPressed,
+                        ]}
+                        accessibilityRole="button"
+                        accessibilityLabel={`View ${expense.description || expense.category_name} expense`}
                       >
-                        <Text style={styles.expenseIcon}>
-                          {expense.category_icon}
-                        </Text>
-                      </IconContainer>
-                      <View style={styles.expenseInfo}>
-                        <Text style={styles.expenseCategory} numberOfLines={1}>
-                          {expense.description || expense.category_name}
-                        </Text>
-                        <View style={styles.expenseMeta}>
-                          <Text style={styles.expensePayment} numberOfLines={1}>
-                            {expense.payment_method}
+                        <IconContainer
+                          size={44}
+                          backgroundColor={expense.category_color + "1F"}
+                        >
+                          <Text style={styles.expenseIcon}>{expense.category_icon}</Text>
+                        </IconContainer>
+                        <View style={styles.expenseInfo}>
+                          <Text style={styles.expenseCategory} numberOfLines={1}>
+                            {expense.description || expense.category_name}
                           </Text>
-                          <Text style={styles.metaDot}> · </Text>
-                          <Text style={styles.expenseTime}>
-                            {extractTime(expense.date)}
-                          </Text>
+                          <View style={styles.expenseMeta}>
+                            <Text style={styles.expensePayment} numberOfLines={1}>
+                              {expense.payment_method}
+                            </Text>
+                            <Text style={styles.metaDot}> · </Text>
+                            <Text style={styles.expenseTime}>
+                              {extractTime(expense.date)}
+                            </Text>
+                          </View>
                         </View>
-                      </View>
-                      <Text style={styles.expenseAmount}>
-                        {formatKoboAmount(expense.amount)}
-                      </Text>
-                    </Pressable>
-                  </React.Fragment>
-                ))}
-              </Card>
-            </View>
+                        <View style={styles.expenseRight}>
+                          <Text style={styles.expenseAmount}>
+                            {formatKoboAmount(expense.amount)}
+                          </Text>
+                          <Ionicons name="chevron-forward" size={13} color={Colors.textTertiary} />
+                        </View>
+                      </Pressable>
+                    </React.Fragment>
+                  ))}
+                </Card>
+              </View>
+            </AnimatedEntry>
           ))}
         </ScrollView>
       ) : (
@@ -287,11 +298,7 @@ export default function HistoryScreen() {
             title="No expenses found"
             message="Your spending records for this period will appear here."
             icon={
-              <Ionicons
-                name="receipt-outline"
-                size={48}
-                color={Colors.primary}
-              />
+              <Ionicons name="receipt-outline" size={48} color={Colors.primary} />
             }
           />
         </View>
@@ -308,9 +315,12 @@ const styles = StyleSheet.create({
   flex: {
     flex: 1,
   },
+
+  // Header
   header: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: Spacing.base,
     paddingTop: Spacing.base,
     paddingBottom: Spacing.sm,
@@ -318,17 +328,19 @@ const styles = StyleSheet.create({
   headerTitle: {
     ...Typography.h1,
     color: Colors.textPrimary,
-    flex: 1,
+  },
+  headerSubtitle: {
+    ...Typography.caption,
+    color: Colors.textSecondary,
+    marginTop: 2,
   },
   searchButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: Colors.primarySoft,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
   },
   searchButtonPressed: Pressed.default,
   loadingContainer: {
@@ -336,6 +348,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+
+  // Filter bar
   filterBar: {
     paddingBottom: Spacing.md,
   },
@@ -348,7 +362,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.base,
     paddingVertical: Spacing.sm,
     borderRadius: Radius.xl,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: Colors.border,
     backgroundColor: Colors.surface,
   },
@@ -361,15 +375,19 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
   },
   filterLabelActive: {
-    color: Colors.surface,
-    fontWeight: "600",
+    color: Colors.white,
+    fontWeight: "700",
   },
   filterChipPressed: Pressed.default,
+
+  // Scroll content
   scrollContent: {
     paddingHorizontal: Spacing.base,
     paddingBottom: Spacing.xxxl,
     gap: Spacing.base,
   },
+
+  // Group
   groupSection: {
     gap: Spacing.sm,
   },
@@ -378,29 +396,51 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
+  groupHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+  },
+  groupDateDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.primary,
+  },
   groupDateLabel: {
     ...Typography.label,
     color: Colors.textSecondary,
     letterSpacing: 0.5,
     textTransform: "uppercase",
+    fontWeight: "700",
+  },
+  groupTotalBadge: {
+    backgroundColor: Colors.primarySoft,
+    borderRadius: Radius.sm,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 2,
   },
   groupTotal: {
-    ...Typography.bodySmall,
-    color: Colors.textPrimary,
-    fontWeight: "600",
+    ...Typography.caption,
+    color: Colors.primary,
+    fontWeight: "700",
   },
   groupCard: {
-    padding: Spacing.sm,
+    padding: 0,
+    overflow: "hidden",
   },
+
+  // Expense row
   expenseRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: Spacing.md,
-    paddingVertical: Spacing.xs,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.base,
   },
   expenseRowPressed: Pressed.default,
   expenseIcon: {
-    fontSize: 18,
+    fontSize: 20,
   },
   expenseInfo: {
     flex: 1,
@@ -420,21 +460,26 @@ const styles = StyleSheet.create({
   },
   metaDot: {
     ...Typography.caption,
-    color: Colors.textSecondary,
+    color: Colors.textTertiary,
   },
   expenseTime: {
     ...Typography.caption,
     color: Colors.textSecondary,
   },
+  expenseRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+  },
   expenseAmount: {
-    ...Typography.bodyMedium,
+    ...Typography.bodySmall,
     color: Colors.textPrimary,
-    fontWeight: "600",
+    fontWeight: "700",
   },
   divider: {
     height: 1,
-    backgroundColor: Colors.border,
-    marginVertical: Spacing.xs,
+    backgroundColor: Colors.borderLight,
+    marginHorizontal: Spacing.base,
   },
   emptyContainer: {
     flex: 1,

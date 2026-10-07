@@ -5,7 +5,6 @@ import {
   StyleSheet,
   Pressable,
   ScrollView,
-  Alert,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
@@ -18,6 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSQLiteContext } from "expo-sqlite";
 import { Input } from "../components/ui/Input";
 import { Button } from "../components/ui/Button";
+import { usePopup } from "../components/popup/PopupProvider";
 import { AnimatedEntry } from "../components/ui/AnimatedEntry";
 import { Card } from "../components/ui/Card";
 import { Colors } from "../constants/colors";
@@ -83,6 +83,7 @@ function toTimeString(d: Date): string {
 export default function AddIncomeScreen() {
   const router = useRouter();
   const db = useSQLiteContext();
+  const popup = usePopup();
 
   const [amount, setAmount] = useState("");
   const [selectedSource, setSelectedSource] = useState<IncomeSource | "">("");
@@ -168,12 +169,11 @@ export default function AddIncomeScreen() {
         income_time: time,
       });
 
-      Alert.alert("Success", "Income saved successfully", [
-        { text: "OK", onPress: () => router.back() },
-      ]);
+      popup.success("Income saved successfully");
+      router.back();
     } catch (e) {
       console.warn("Save failed:", e);
-      Alert.alert("Error", "Failed to save income. Please try again.");
+      popup.error("Failed to save income. Please try again.");
     } finally {
       savingRef.current = false;
       setLoading(false);

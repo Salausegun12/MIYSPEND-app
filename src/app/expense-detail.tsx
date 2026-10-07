@@ -5,7 +5,6 @@ import {
   StyleSheet,
   Pressable,
   ScrollView,
-  Alert,
   ActivityIndicator,
   Platform,
 } from "react-native";
@@ -17,6 +16,7 @@ import { useSQLiteContext } from "expo-sqlite";
 import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { Input } from "../components/ui/Input";
 import { Button } from "../components/ui/Button";
+import { usePopup } from "../components/popup/PopupProvider";
 import { AnimatedEntry } from "../components/ui/AnimatedEntry";
 import { Card } from "../components/ui/Card";
 import { Colors } from "../constants/colors";
@@ -90,6 +90,7 @@ export default function ExpenseDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const db = useSQLiteContext();
+  const popup = usePopup();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -193,37 +194,31 @@ export default function ExpenseDetailScreen() {
 
       setEditing(false);
       await loadExpense();
-      Alert.alert("Success", "Expense updated successfully");
+      popup.success("Expense updated successfully");
     } catch (e) {
       console.warn("Failed to update expense:", e);
-      Alert.alert("Error", "Failed to update expense. Please try again.");
+      popup.error("Failed to update expense. Please try again.");
     } finally {
       setSaving(false);
     }
   }
 
-  function handleDelete() {
+  async function handleDelete() {
     if (!expense) return;
-    Alert.alert(
+    const confirmed = await popup.confirm(
       "Delete Expense",
       "Are you sure you want to delete this expense? This action cannot be undone.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await deleteExpense(db, expense.id);
-              router.back();
-            } catch (e) {
-              console.warn("Failed to delete expense:", e);
-              Alert.alert("Error", "Failed to delete expense.");
-            }
-          },
-        },
-      ]
+      { destructive: true, confirmText: "Delete" }
     );
+    if (!confirmed || !expense) return;
+
+    try {
+      await deleteExpense(db, expense.id);
+      router.back();
+    } catch (e) {
+      console.warn("Failed to delete expense:", e);
+      popup.error("Failed to delete expense.");
+    }
   }
 
   function onDateChange(event: DateTimePickerEvent, selectedDate?: Date) {

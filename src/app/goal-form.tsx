@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   Pressable,
-  Alert,
   Platform,
   KeyboardAvoidingView,
   ActivityIndicator,
@@ -21,6 +20,7 @@ import { AnimatedEntry } from "../components/ui/AnimatedEntry";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { Input } from "../components/ui/Input";
+import { usePopup } from "../components/popup/PopupProvider";
 import { Colors } from "../constants/colors";
 import { Radius } from "../constants/radius";
 import { Spacing } from "../constants/spacing";
@@ -49,6 +49,7 @@ function parseDateString(s: string): Date {
 export default function GoalFormScreen() {
   const db = useSQLiteContext();
   const router = useRouter();
+  const popup = usePopup();
   const { id } = useLocalSearchParams<{ id?: string }>();
   const goalId = id ? Number(id) : null;
   const isEditing = goalId !== null && !Number.isNaN(goalId);
@@ -134,19 +135,15 @@ export default function GoalFormScreen() {
         });
       }
 
-      Alert.alert(
-        isEditing ? "Goal Updated" : "Goal Created",
+      popup.success(
         isEditing
           ? "Your changes have been saved."
-          : "Add contributions as you save towards it.",
-        [{ text: "OK", onPress: () => router.back() }]
+          : "Goal created. Add contributions as you save towards it."
       );
+      router.back();
     } catch (e) {
       console.warn("Failed to save goal:", e);
-      Alert.alert(
-        "Error",
-        e instanceof Error ? e.message : "Failed to save goal."
-      );
+      popup.error(e instanceof Error ? e.message : "Failed to save goal.");
     } finally {
       setSaving(false);
     }

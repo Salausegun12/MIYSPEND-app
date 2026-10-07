@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  Alert,
   Platform,
   KeyboardAvoidingView,
 } from "react-native";
@@ -15,6 +14,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useSQLiteContext } from "expo-sqlite";
 import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
+import { usePopup } from "../../components/popup/PopupProvider";
 import { Colors } from "../../constants/colors";
 import { Typography } from "../../constants/typography";
 import { Spacing } from "../../constants/spacing";
@@ -24,6 +24,7 @@ import { saveUserProfile } from "../../utils/user";
 export default function OnboardingSignUpScreen() {
   const router = useRouter();
   const db = useSQLiteContext();
+  const popup = usePopup();
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -60,7 +61,7 @@ export default function OnboardingSignUpScreen() {
       router.replace("/(tabs)");
     } catch (e) {
       console.warn("Failed to save profile:", e);
-      Alert.alert("Error", "Failed to save your profile. Please try again.");
+      popup.error("Failed to save your profile. Please try again.");
     } finally {
       setLoading(false);
     }
