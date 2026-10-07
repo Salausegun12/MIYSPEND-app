@@ -51,7 +51,8 @@
           "backgroundColor": "#004D40"
         }
       ],
-      "expo-sharing"
+      "expo-sharing",
+      "expo-sqlite"
     ],
     "extra": {
       "router": {},

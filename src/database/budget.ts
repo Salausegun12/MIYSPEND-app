@@ -1,4 +1,4 @@
-import { SQLiteDatabase } from "expo-sqlite";
+import type { SQLiteDatabase } from "expo-sqlite";
 import type { Budget, BudgetWithCategory } from "../types/database";
 
 function assertKoboAmount(amount: number, field: string): void {

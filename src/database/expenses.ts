@@ -1,4 +1,4 @@
-import { SQLiteDatabase } from "expo-sqlite";
+import type { SQLiteDatabase } from "expo-sqlite";
 import type { ExpenseWithCategory } from "../types/database";
 
 export async function addExpense(

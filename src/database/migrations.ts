@@ -1,4 +1,4 @@
-import { SQLiteDatabase } from "expo-sqlite";
+import type { SQLiteDatabase } from "expo-sqlite";
 import { RECURRING_SCHEMA_SQL } from "./recurring";
 
 const CURRENT_DB_VERSION = 7;
