@@ -265,3 +265,47 @@ export interface Insight {
   icon: string;
   message: string;
 }
+
+export type TransactionType = "income" | "expense";
+
+/**
+ * Filters for the transaction search. All fields are optional and combined
+ * with AND. Amounts are in kobo (NG minor units), dates are YYYY-MM-DD and
+ * `query` is a case-insensitive substring match against description, income
+ * source, category name and payment method.
+ */
+export interface TransactionSearchFilters {
+  query?: string;
+  /** Restricts which record types are searched. Defaults to both. */
+  types?: TransactionType[];
+  /** Only applies to expense records. */
+  categoryId?: number;
+  /** Exact payment method match. */
+  paymentMethod?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  minAmount?: number;
+  maxAmount?: number;
+  limit?: number;
+}
+
+/**
+ * A single matched row from either table, normalised so the UI renders income
+ * and expenses identically. `date` keeps the full stored value; the UI shows
+ * the YYYY-MM-DD part.
+ */
+export interface TransactionSearchResult {
+  type: TransactionType;
+  id: number;
+  amount: number;
+  /** Expense description, or the income source (income has no description). */
+  description: string;
+  payment_method: string;
+  date: string;
+  category_id: number | null;
+  category_name: string | null;
+  category_icon: string | null;
+  category_color: string | null;
+  /** Income source; empty string for expenses. */
+  source: string;
+}

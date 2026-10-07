@@ -115,6 +115,10 @@ function RootNavigator() {
         name="recurring-form"
         options={{ presentation: "modal", animation: "slide_from_bottom" }}
       />
+      <Stack.Screen
+        name="search"
+        options={{ presentation: "modal", animation: "slide_from_bottom" }}
+      />
       <Stack.Screen name="onboarding" options={{ animation: "fade" }} />
     </Stack>
   );

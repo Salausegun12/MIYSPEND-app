@@ -7,3 +7,4 @@ export * as budget from "./budget";
 export * as savingsGoals from "./savingsGoals";
 export * as recurring from "./recurring";
 export * as insights from "./insights";
+export * as search from "./search";

@@ -169,6 +169,15 @@ export default function HistoryScreen() {
       <AnimatedEntry delay={40}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>History</Text>
+          <Pressable
+            onPress={() => router.push("/search" as Href)}
+            style={({ pressed }) => [styles.searchButton, pressed && styles.searchButtonPressed]}
+            accessibilityRole="button"
+            accessibilityLabel="Search transactions"
+            hitSlop={8}
+          >
+            <Ionicons name="search" size={22} color={Colors.textPrimary} />
+          </Pressable>
         </View>
       </AnimatedEntry>
 
@@ -300,6 +309,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: Spacing.base,
     paddingTop: Spacing.base,
     paddingBottom: Spacing.sm,
@@ -307,7 +318,19 @@ const styles = StyleSheet.create({
   headerTitle: {
     ...Typography.h1,
     color: Colors.textPrimary,
+    flex: 1,
   },
+  searchButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  searchButtonPressed: Pressed.default,
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
