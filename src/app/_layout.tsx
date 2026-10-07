@@ -119,6 +119,10 @@ function RootNavigator() {
         name="search"
         options={{ presentation: "modal", animation: "slide_from_bottom" }}
       />
+      <Stack.Screen
+        name="export"
+        options={{ presentation: "modal", animation: "slide_from_bottom" }}
+      />
       <Stack.Screen name="onboarding" options={{ animation: "fade" }} />
     </Stack>
   );

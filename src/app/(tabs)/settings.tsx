@@ -303,6 +303,40 @@ export default function SettingsScreen() {
         </View>
 
         <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Data</Text>
+          <Card style={styles.card}>
+            <Pressable
+              onPress={() => router.push("/export" as Href)}
+              style={({ pressed }) => [
+                styles.settingRow,
+                pressed && styles.settingRowPressed,
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Export data"
+            >
+              <View style={styles.settingInfo}>
+                <Ionicons
+                  name="download-outline"
+                  size={22}
+                  color={Colors.primary}
+                />
+                <View style={styles.settingText}>
+                  <Text style={styles.settingTitle}>Export Data</Text>
+                  <Text style={styles.settingDesc}>
+                    Save a local CSV or PDF copy of your records
+                  </Text>
+                </View>
+              </View>
+              <Ionicons
+                name="chevron-forward"
+                size={20}
+                color={Colors.textSecondary}
+              />
+            </Pressable>
+          </Card>
+        </View>
+
+        <View style={styles.section}>
           <Text style={styles.sectionLabel}>Automation</Text>
           <Card style={styles.card}>
             <Pressable

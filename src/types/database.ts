@@ -309,3 +309,69 @@ export interface TransactionSearchResult {
   /** Income source; empty string for expenses. */
   source: string;
 }
+
+/**
+ * A single transaction in a local financial export, normalised so income and
+ * expenses share one shape. Amounts are integer kobo; `date` keeps the full
+ * stored value ("YYYY-MM-DD" or "YYYY-MM-DD HH:MM:SS"; income always includes
+ * the time). All other strings are empty when not applicable.
+ */
+export interface ExportedTransaction {
+  type: TransactionType;
+  id: number;
+  amount: number;
+  date: string;
+  /** Expense description. Empty for income. */
+  description: string;
+  /** Income source. Empty for expenses. */
+  source: string;
+  categoryId: number | null;
+  categoryName: string | null;
+  categoryIcon: string | null;
+  categoryColor: string | null;
+  paymentMethod: string;
+  note: string;
+}
+
+/** One row of the "spending by category" breakdown in an export summary. */
+export interface ExportCategoryTotal {
+  categoryId: number;
+  name: string;
+  icon: string;
+  color: string;
+  total: number;
+  count: number;
+}
+
+/** One row of the "income by source" breakdown in an export summary. */
+export interface ExportSourceTotal {
+  source: string;
+  total: number;
+  count: number;
+}
+
+/**
+ * Financial summary derived only from locally recorded transactions.
+ * Amounts are integer kobo. Breakdown lists are sorted by total descending.
+ */
+export interface ExportSummary {
+  income: number;
+  expenses: number;
+  net: number;
+  transactionCount: number;
+  categories: ExportCategoryTotal[];
+  sources: ExportSourceTotal[];
+}
+
+/**
+ * A fully built export: the raw normalised rows plus their summary, a CSV
+ * (transactions + summary sections) and the PDF report HTML. Everything is
+ * generated on-device; nothing is uploaded anywhere.
+ */
+export interface ExportReport {
+  transactions: ExportedTransaction[];
+  summary: ExportSummary;
+  csv: string;
+  pdfHtml: string;
+  generatedAt: Date;
+}
