@@ -7,6 +7,7 @@
     "@react-native-community/datetimepicker": "9.1.0",
     "expo": "~57.0.25",
     "expo-constants": "~57.0.18",
+    "expo-document-picker": "~57.0.3",
     "expo-file-system": "~57.0.7",
     "expo-font": "~57.0.4",
     "expo-haptics": "~57.0.3",
@@ -37,7 +38,7 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test tests/recurring.test.ts tests/insights.test.ts tests/search.test.ts tests/export.test.ts"
+    "test": "node --experimental-strip-types --test tests/recurring.test.ts tests/insights.test.ts tests/search.test.ts tests/export.test.ts tests/backup.test.ts"
   },
   "private": true
 }

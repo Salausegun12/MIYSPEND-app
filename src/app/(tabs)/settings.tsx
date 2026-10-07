@@ -306,6 +306,35 @@ export default function SettingsScreen() {
           <Text style={styles.sectionLabel}>Data</Text>
           <Card style={styles.card}>
             <Pressable
+              onPress={() => router.push("/backup" as Href)}
+              style={({ pressed }) => [
+                styles.settingRow,
+                pressed && styles.settingRowPressed,
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Backup and restore"
+            >
+              <View style={styles.settingInfo}>
+                <Ionicons
+                  name="archive-outline"
+                  size={22}
+                  color={Colors.primary}
+                />
+                <View style={styles.settingText}>
+                  <Text style={styles.settingTitle}>Backup & Restore</Text>
+                  <Text style={styles.settingDesc}>
+                    Save or restore all your records as a local file
+                  </Text>
+                </View>
+              </View>
+              <Ionicons
+                name="chevron-forward"
+                size={20}
+                color={Colors.textSecondary}
+              />
+            </Pressable>
+            <View style={styles.settingDivider} />
+            <Pressable
               onPress={() => router.push("/export" as Href)}
               style={({ pressed }) => [
                 styles.settingRow,

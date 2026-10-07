@@ -9,3 +9,4 @@ export * as recurring from "./recurring";
 export * as insights from "./insights";
 export * as search from "./search";
 export * as dataExport from "./export";
+export * as backup from "./backup";

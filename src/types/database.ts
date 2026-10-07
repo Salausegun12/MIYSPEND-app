@@ -375,3 +375,137 @@ export interface ExportReport {
   pdfHtml: string;
   generatedAt: Date;
 }
+
+/* -------------------------------------------------------------------------- */
+/*                                Local backup                                */
+/* -------------------------------------------------------------------------- */
+
+export interface BackupCategory {
+  id: number;
+  name: string;
+  icon: string;
+  color: string;
+  sort_order: number;
+  created_at: string;
+}
+
+export interface BackupExpense {
+  id: number;
+  amount: number;
+  category_id: number;
+  description: string;
+  payment_method: string;
+  note: string;
+  date: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BackupIncome {
+  id: number;
+  amount: number;
+  source: string;
+  payment_method: string;
+  note: string;
+  income_date: string;
+  income_time: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BackupSetting {
+  key: string;
+  value: string;
+}
+
+export interface BackupBudget {
+  id: number;
+  category_id: number;
+  limit_amount: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BackupSavingsGoal {
+  id: number;
+  name: string;
+  target_amount: number;
+  current_amount: number;
+  target_date: string | null;
+  note: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BackupContribution {
+  id: number;
+  goal_id: number;
+  amount: number;
+  date: string;
+  note: string;
+  created_at: string;
+}
+
+export interface BackupRecurringTransaction {
+  id: number;
+  type: RecurringType;
+  amount: number;
+  description: string;
+  category_id: number | null;
+  payment_method: string;
+  frequency: RecurringFrequency;
+  next_occurrence: string;
+  anchor_day: number;
+  end_date: string | null;
+  is_active: 0 | 1;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BackupRecurringOccurrence {
+  id: number;
+  recurring_id: number;
+  occurrence_date: string;
+  created_at: string;
+}
+
+/**
+ * The versioned, offline backup format. Every record is stored verbatim with
+ * its original id so a restore can reproduce the exact database and keep
+ * foreign keys valid. All amounts are integer kobo.
+ */
+export interface MiySpendBackup {
+  app: "miyspend";
+  format: "miyspend-backup";
+  version: 1;
+  exportedAt: string;
+  collections: {
+    categories: BackupCategory[];
+    expenses: BackupExpense[];
+    income: BackupIncome[];
+    settings: BackupSetting[];
+    budgets: BackupBudget[];
+    savingsGoals: BackupSavingsGoal[];
+    contributions: BackupContribution[];
+    recurringTransactions: BackupRecurringTransaction[];
+    recurringOccurrences: BackupRecurringOccurrence[];
+  };
+}
+
+/** Counts per collection, used to summarise a backup in the UI. */
+export interface BackupCollectionCounts {
+  categories: number;
+  expenses: number;
+  income: number;
+  settings: number;
+  budgets: number;
+  savingsGoals: number;
+  contributions: number;
+  recurringTransactions: number;
+  recurringOccurrences: number;
+}
+
+/** Outcome of parsing + validating a prospective backup file. */
+export type BackupValidationResult =
+  | { ok: true; payload: MiySpendBackup }
+  | { ok: false; error: string };
