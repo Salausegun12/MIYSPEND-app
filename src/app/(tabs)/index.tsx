@@ -27,7 +27,6 @@ import { Shadows } from "../../constants/shadows";
 import {
   getTotalExpenses,
   getAllExpenses,
-  getTodayExpenseCount,
   getExpensesByDateRange,
 } from "../../database/expenses";
 import { getTotalIncome, getAllIncome } from "../../database/income";
@@ -49,60 +48,39 @@ import {
 import { getUserName } from "../../utils/user";
 import type { ExpenseWithCategory, Income, IncomeSource } from "../../types/database";
 
-interface StatTileProps {
+const HERO_GRADIENT = ["#00937D", "#00554A"] as const;
+
+interface PeriodRowProps {
   label: string;
   income: number;
-  expenses: number;
+  expense: number;
   children?: React.ReactNode;
 }
 
-const PERIOD_TINTS: Record<string, { background: string; color: string }> = {
-  Today: { background: Colors.accent.goldSoft, color: Colors.accent.gold },
-  "This Week": { background: Colors.accent.skySoft, color: Colors.accent.sky },
-  "This Month": {
-    background: Colors.accent.violetSoft,
-    color: Colors.accent.violet,
-  },
-};
-
-function StatTile({ label, income, expenses, children }: StatTileProps) {
-  const net = income - expenses;
+function PeriodRow({ label, income, expense, children }: PeriodRowProps) {
+  const net = income - expense;
   const isPositive = net >= 0;
-  const tint = PERIOD_TINTS[label];
   return (
-    <View style={styles.statTile}>
-      <Text
-        style={[
-          styles.statPeriod,
-          tint && { backgroundColor: tint.background, color: tint.color },
-        ]}
-      >
-        {label}
-      </Text>
-      <View style={styles.statBody}>
-        <View style={styles.statRows}>
-          <View style={styles.statRow}>
-            <View style={styles.statDot} />
-            <Text style={styles.statLabel}>Income</Text>
-            <Text style={[styles.statValue, styles.incomeValue]}>
-              {formatKoboAmount(income)}
-            </Text>
-          </View>
-          <View style={styles.statRow}>
-            <View style={[styles.statDot, styles.statDotExpense]} />
-            <Text style={styles.statLabel}>Expenses</Text>
-            <Text style={[styles.statValue, styles.expenseValue]}>
-              {formatKoboAmount(expenses)}
-            </Text>
-          </View>
-          <View style={[styles.statRow, styles.statNetRow]}>
-            <Text style={[styles.statNetLabel, isPositive ? styles.netPositive : styles.netNegative]}>
-              Net {isPositive ? "▲" : "▼"} {formatSignedKoboAmount(net)}
-            </Text>
-          </View>
+    <View style={styles.periodRow}>
+      <View style={styles.periodRowLeft}>
+        <View style={styles.periodRowHeader}>
+          <Text style={styles.periodRowLabel}>{label}</Text>
+          <Text
+            style={[
+              styles.periodRowNet,
+              isPositive ? styles.netPositive : styles.netNegative,
+            ]}
+          >
+            {formatSignedKoboAmount(net)}
+          </Text>
         </View>
-        {children ? <View style={styles.statChart}>{children}</View> : null}
+        <Text style={styles.periodRowMeta}>
+          <Text style={styles.periodRowIn}>+{formatKoboAmount(income)}</Text>
+          {"  ·  "}
+          <Text style={styles.periodRowOut}>-{formatKoboAmount(expense)}</Text>
+        </Text>
       </View>
+      {children ? <View style={styles.periodRowChart}>{children}</View> : null}
     </View>
   );
 }
@@ -118,7 +96,6 @@ export default function HomeScreen() {
   const [weekExpense, setWeekExpense] = useState(0);
   const [monthIncome, setMonthIncome] = useState(0);
   const [monthExpense, setMonthExpense] = useState(0);
-  const [todayCount, setTodayCount] = useState(0);
   const [recentExpenses, setRecentExpenses] = useState<ExpenseWithCategory[]>([]);
   const [recentIncomes, setRecentIncomes] = useState<Income[]>([]);
   const [userName, setUserName] = useState<string | null>(null);
@@ -140,7 +117,6 @@ export default function HomeScreen() {
         weeksExpense,
         monthsIncome,
         monthsExpense,
-        count,
         recentExp,
         recentInc,
         name,
@@ -152,7 +128,6 @@ export default function HomeScreen() {
         getTotalExpenses(db, `${weekStart} 00:00:00`, `${weekEnd} 23:59:59`),
         getTotalIncome(db, monthStart, monthEnd),
         getTotalExpenses(db, `${monthStart} 00:00:00`, `${monthEnd} 23:59:59`),
-        getTodayExpenseCount(db, today),
         getAllExpenses(db, 5),
         getAllIncome(db, 5),
         getUserName(db),
@@ -169,7 +144,6 @@ export default function HomeScreen() {
       setWeekExpense(weeksExpense);
       setMonthIncome(monthsIncome);
       setMonthExpense(monthsExpense);
-      setTodayCount(count);
       setRecentExpenses(recentExp);
       setRecentIncomes(recentInc);
       setUserName(name);
@@ -255,38 +229,26 @@ export default function HomeScreen() {
         {/* ── Hero balance card ── */}
         <AnimatedEntry delay={30}>
           <LinearGradient
-            colors={Colors.gradient.hero}
+            colors={HERO_GRADIENT}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.heroCard}
           >
-            {/* Decorative circles */}
-            <View style={styles.heroBubble1} />
-            <View style={styles.heroBubble2} />
-            <View style={styles.heroBubble3} />
-
             <Text style={styles.heroLabel}>This month's net</Text>
             <Text style={[styles.heroAmount, monthNet < 0 && styles.heroAmountNeg]}>
               {formatSignedKoboAmount(monthNet)}
             </Text>
+
             <View style={styles.heroStats}>
               <View style={styles.heroStat}>
-                <Ionicons name="arrow-up-circle" size={14} color="#A8EDD7" />
                 <Text style={styles.heroStatLabel}>Income</Text>
                 <Text style={styles.heroStatValue}>{formatKoboAmount(monthIncome)}</Text>
               </View>
               <View style={styles.heroStatDivider} />
               <View style={styles.heroStat}>
-                <Ionicons name="arrow-down-circle" size={14} color="#FFB4B4" />
                 <Text style={styles.heroStatLabel}>Expenses</Text>
                 <Text style={styles.heroStatValue}>{formatKoboAmount(monthExpense)}</Text>
               </View>
-            </View>
-
-            <View style={styles.heroBadge}>
-              <Text style={styles.heroBadgeText}>
-                {todayCount} expense{todayCount === 1 ? "" : "s"} recorded today
-              </Text>
             </View>
           </LinearGradient>
         </AnimatedEntry>
@@ -301,30 +263,25 @@ export default function HomeScreen() {
               accessibilityLabel="Add expense"
             >
               <LinearGradient
-                colors={Colors.gradient.sunset}
+                colors={Colors.gradient.primary}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.quickBtnFill}
               >
-                <Ionicons name="remove-circle-outline" size={22} color={Colors.white} />
+                <Ionicons name="remove-circle-outline" size={20} color={Colors.white} />
                 <Text style={styles.quickBtnText} numberOfLines={1}>Add Expense</Text>
               </LinearGradient>
             </Pressable>
             <Pressable
               onPress={() => router.push("/add-income" as Href)}
-              style={({ pressed }) => [styles.quickBtn, pressed && styles.quickBtnPressed]}
+              style={({ pressed }) => [styles.quickBtn, styles.quickBtnSoft, pressed && styles.quickBtnPressed]}
               accessibilityRole="button"
               accessibilityLabel="Add income"
             >
-              <LinearGradient
-                colors={Colors.gradient.mint}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.quickBtnFill}
-              >
-                <Ionicons name="add-circle-outline" size={22} color={Colors.white} />
-                <Text style={styles.quickBtnText} numberOfLines={1}>Add Income</Text>
-              </LinearGradient>
+              <View style={styles.quickBtnFill}>
+                <Ionicons name="add-circle-outline" size={20} color={Colors.primary} />
+                <Text style={[styles.quickBtnText, styles.quickBtnTextSoft]} numberOfLines={1}>Add Income</Text>
+              </View>
             </Pressable>
           </View>
         </AnimatedEntry>
@@ -333,7 +290,7 @@ export default function HomeScreen() {
         <AnimatedEntry delay={80}>
           <Text style={styles.sectionTitle}>Period summary</Text>
           <Card style={styles.periodCard}>
-            <StatTile label="Today" income={todayIncome} expenses={todayExpense}>
+            <PeriodRow label="Today" income={todayIncome} expense={todayExpense}>
               <PieChart
                 data={[
                   {
@@ -352,30 +309,30 @@ export default function HomeScreen() {
                 total={todayIncome + todayExpense}
                 centerLabel="Total"
                 formatValue={formatKoboAmount}
-                size={84}
-                stroke={14}
+                size={76}
+                stroke={12}
                 showLegend={false}
               />
-            </StatTile>
+            </PeriodRow>
             <View style={styles.periodDivider} />
-            <StatTile label="This Week" income={weekIncome} expenses={weekExpense}>
+            <PeriodRow label="This Week" income={weekIncome} expense={weekExpense}>
               <BarChart
                 compact
                 data={weekBars}
                 activeId={getTodayString()}
                 formatValue={formatKoboAmount}
-                color={Colors.accent.rose}
-                colorSoft="#FDA4AF"
+                color={Colors.primary}
+                colorSoft="#A7E8D6"
               />
-            </StatTile>
+            </PeriodRow>
             <View style={styles.periodDivider} />
-            <StatTile label="This Month" income={monthIncome} expenses={monthExpense}>
+            <PeriodRow label="This Month" income={monthIncome} expense={monthExpense}>
               <LineChart
                 data={monthDaily}
                 height={64}
                 formatValue={formatKoboAmount}
               />
-            </StatTile>
+            </PeriodRow>
           </Card>
         </AnimatedEntry>
 
@@ -567,40 +524,12 @@ const styles = StyleSheet.create({
   heroCard: {
     borderRadius: Radius.xxl,
     padding: Spacing.xl,
-    overflow: "hidden",
     gap: Spacing.xs,
     ...Shadows.lg,
   },
-  heroBubble1: {
-    position: "absolute",
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    backgroundColor: "rgba(167,139,250,0.28)",
-    top: -40,
-    right: -30,
-  },
-  heroBubble2: {
-    position: "absolute",
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    backgroundColor: "rgba(251,191,36,0.20)",
-    bottom: -20,
-    left: -20,
-  },
-  heroBubble3: {
-    position: "absolute",
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: "rgba(56,189,248,0.16)",
-    bottom: -45,
-    right: -25,
-  },
   heroLabel: {
     ...Typography.caption,
-    color: "rgba(255,255,255,0.65)",
+    color: "rgba(255,255,255,0.7)",
     letterSpacing: 0.5,
     textTransform: "uppercase",
   },
@@ -617,44 +546,29 @@ const styles = StyleSheet.create({
   heroStats: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: Spacing.md,
-    backgroundColor: "rgba(0,0,0,0.15)",
-    borderRadius: Radius.lg,
-    padding: Spacing.md,
+    marginTop: Spacing.lg,
+    paddingTop: Spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255,255,255,0.18)",
   },
   heroStat: {
     flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
+    gap: 2,
   },
   heroStatLabel: {
     ...Typography.caption,
     color: "rgba(255,255,255,0.65)",
-    flex: 1,
   },
   heroStatValue: {
-    ...Typography.caption,
+    ...Typography.bodyMedium,
     color: Colors.white,
     fontWeight: "600",
   },
   heroStatDivider: {
     width: 1,
-    height: 24,
+    height: 28,
     backgroundColor: "rgba(255,255,255,0.2)",
-    marginHorizontal: Spacing.md,
-  },
-  heroBadge: {
-    alignSelf: "flex-start",
-    marginTop: Spacing.sm,
-    backgroundColor: "rgba(255,255,255,0.15)",
-    borderRadius: Radius.md,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 3,
-  },
-  heroBadgeText: {
-    ...Typography.caption,
-    color: "rgba(255,255,255,0.8)",
+    marginHorizontal: Spacing.lg,
   },
 
   // Quick actions
@@ -678,11 +592,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.sm,
   },
   quickBtnPressed: Pressed.default,
+  quickBtnSoft: {
+    backgroundColor: Colors.primarySoft,
+    borderWidth: 1,
+    borderColor: "#CDEFE1",
+  },
   quickBtnText: {
     fontSize: 14,
     fontWeight: "700",
     color: Colors.white,
     flexShrink: 1,
+  },
+  quickBtnTextSoft: {
+    color: Colors.primary,
   },
 
   // Section
@@ -710,78 +632,53 @@ const styles = StyleSheet.create({
   },
   seeAllPressed: Pressed.default,
 
-  // Period stats card
+  // Period summary card
   periodCard: {
     gap: 0,
     padding: 0,
     overflow: "hidden",
   },
-  statTile: {
-    padding: Spacing.base,
-    gap: Spacing.sm,
+  periodRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.md,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.base,
   },
-  statPeriod: {
-    ...Typography.label,
-    alignSelf: "flex-start",
-    color: Colors.textSecondary,
-    backgroundColor: Colors.borderLight,
-    borderRadius: 999,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 4,
-    letterSpacing: 0.3,
-    overflow: "hidden",
+  periodRowLeft: {
+    flex: 1,
+    gap: 3,
   },
-  statBody: {
+  periodRowHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: Spacing.md,
-  },
-  statRows: {
-    flex: 1,
     gap: Spacing.xs,
   },
-  statChart: {
-    width: 150,
-    alignItems: "center",
-  },
-  statRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.sm,
-  },
-  statNetRow: {
-    marginTop: 2,
-  },
-  statDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.success,
-  },
-  statDotExpense: {
-    backgroundColor: Colors.accent.rose,
-  },
-  statLabel: {
-    ...Typography.bodySmall,
-    color: Colors.textSecondary,
-    flex: 1,
-  },
-  statValue: {
-    ...Typography.bodySmall,
+  periodRowLabel: {
+    ...Typography.label,
     color: Colors.textPrimary,
+  },
+  periodRowMeta: {
+    ...Typography.caption,
+    color: Colors.textSecondary,
+  },
+  periodRowIn: {
+    color: Colors.success,
     fontWeight: "600",
   },
-  incomeValue: {
-    color: Colors.success,
-  },
-  expenseValue: {
+  periodRowOut: {
     color: Colors.accent.rose,
+    fontWeight: "600",
   },
-  statNetLabel: {
-    ...Typography.caption,
+  periodRowNet: {
+    ...Typography.bodyMedium,
     fontWeight: "700",
-    letterSpacing: 0.2,
+  },
+  periodRowChart: {
+    width: 140,
+    alignItems: "center",
+    justifyContent: "center",
   },
   netPositive: {
     color: Colors.success,
@@ -792,6 +689,7 @@ const styles = StyleSheet.create({
   periodDivider: {
     height: 1,
     backgroundColor: Colors.borderLight,
+    marginHorizontal: Spacing.base,
   },
 
   // Transaction rows

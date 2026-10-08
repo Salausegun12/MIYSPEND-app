@@ -14,7 +14,7 @@
     },
     "android": {
       "package": "com.miyspend.app",
-      "versionCode": 4,
+      "versionCode": 5,
       "adaptiveIcon": {
         "backgroundColor": "#004D40",
         "foregroundImage": "./logo.png",

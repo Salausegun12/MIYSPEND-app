@@ -32,7 +32,7 @@ import {
   updateGoal,
 } from "../database/savingsGoals";
 import { formatShortDate, getTodayString } from "../utils/date";
-import { formatKoboAmount, nairaToKobo, parseNairaAmount } from "../utils/money";
+import { formatKoboAmount, nairaToKobo, parseNairaAmount, formatAmountInput } from "../utils/money";
 import type { SavingsGoal } from "../types/database";
 
 function toDateString(d: Date): string {
@@ -78,7 +78,7 @@ export default function GoalFormScreen() {
       setGoal(existing);
       if (existing) {
         setName(existing.name);
-        setAmount((existing.target_amount / 100).toString());
+        setAmount(formatAmountInput((existing.target_amount / 100).toString()));
         setTargetDate(existing.target_date);
         setNote(existing.note);
       }
@@ -223,7 +223,7 @@ export default function GoalFormScreen() {
                   <Input
                     value={amount}
                     onChangeText={(t) => {
-                      setAmount(t);
+                      setAmount(formatAmountInput(t));
                       if (errors.amount)
                         setErrors((e) => ({ ...e, amount: undefined }));
                     }}

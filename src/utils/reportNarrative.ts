@@ -4,6 +4,7 @@ import type {
   SavingsGoalWithBalance,
 } from "../types/database";
 import { getBudgetPercent, getBudgetStatus } from "./budget";
+import { groupNaira } from "./money";
 import { formatReportDate } from "./reportPeriods";
 
 /**
@@ -47,11 +48,7 @@ export interface ReportNarrative {
 
 /** "NGN 1,234.56" — the currency format used throughout the report. */
 export function formatNaira(kobo: number): string {
-  const naira = (kobo / 100).toLocaleString("en-NG", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-  return `NGN ${naira}`;
+  return `NGN ${groupNaira(kobo / 100, 2)}`;
 }
 
 /** Whole percent of `part` in `whole`, guarding against a zero whole. */

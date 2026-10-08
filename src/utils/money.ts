@@ -41,13 +41,42 @@ export function parseNairaAmount(text: string): number {
 }
 
 /**
+ * Group an integer amount with thousands separators, independent of the
+ * device's Intl support. 2000 → "2,000"; -1000.5 with 2 digits → "-1,000.50".
+ */
+export function groupNaira(naira: number, fractionDigits: number): string {
+  const [int, dec] = Math.abs(naira).toFixed(fractionDigits).split(".");
+  const grouped = int.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  const sign = naira < 0 ? "-" : "";
+  return dec ? `${sign}${grouped}.${dec}` : `${sign}${grouped}`;
+}
+
+/**
  * Format a kobo amount as a display string with ₦ and commas.
  * 250000 → "₦2,500"
- * 7550 → "₦75.50"
+ * 7550 → "₦75.5"
  */
 export function formatKoboAmount(kobo: number): string {
-  const naira = koboToNaira(kobo);
-  return `₦${naira.toLocaleString("en-NG", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+  let num = groupNaira(koboToNaira(kobo), 2);
+  if (num.includes(".")) {
+    num = num.replace(/0+$/, "").replace(/\.$/, "");
+  }
+  return `₦${num}`;
+}
+
+/**
+ * Format a raw amount field as the user types, grouping thousands with
+ * commas and keeping at most two decimal places.
+ * "20000" → "20,000", "2000" → "2,000", "2000.5" → "2,000.5"
+ */
+export function formatAmountInput(text: string): string {
+  const cleaned = text.replace(/[^\d.]/g, "");
+  const dot = cleaned.indexOf(".");
+  const rawInt = dot === -1 ? cleaned : cleaned.slice(0, dot);
+  const int = rawInt.replace(/^0+(?=\d)/, "").replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  if (dot === -1) return int;
+  const dec = cleaned.slice(dot + 1).replace(/\./g, "").slice(0, 2);
+  return `${int}.${dec}`;
 }
 
 /**

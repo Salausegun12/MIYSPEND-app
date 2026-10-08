@@ -27,7 +27,7 @@ import { Spacing } from "../constants/spacing";
 import { Pressed } from "../constants/motion";
 import { addExpense } from "../database/expenses";
 import { getAllCategories } from "../database/categories";
-import { nairaToKobo, parseNairaInput } from "../utils/money";
+import { nairaToKobo, parseNairaInput, formatAmountInput } from "../utils/money";
 import type { Category, PaymentMethod } from "../types/database";
 import { PAYMENT_METHODS } from "../types/database";
 
@@ -246,7 +246,7 @@ export default function AddExpenseScreen() {
                   keyboardType="decimal-pad"
                   value={amount}
                   onChangeText={(t) => {
-                    setAmount(t);
+                    setAmount(formatAmountInput(t));
                     clearError("amount");
                   }}
                   error={errors.amount}

@@ -193,11 +193,7 @@ export default function HistoryScreen() {
 
       {/* ── Filter chips ── */}
       <View style={styles.filterBar}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterContent}
-        >
+        <View style={styles.filterContent}>
           {FILTERS.map((filter) => {
             const active = activeFilter === filter.key;
             return (
@@ -219,7 +215,7 @@ export default function HistoryScreen() {
               </Pressable>
             );
           })}
-        </ScrollView>
+        </View>
       </View>
 
       {/* ── Content ── */}
@@ -356,9 +352,12 @@ const styles = StyleSheet.create({
   filterContent: {
     paddingHorizontal: Spacing.base,
     gap: Spacing.sm,
+    flexDirection: "row",
+    flexWrap: "wrap",
   },
   filterChip: {
     alignSelf: "flex-start",
+    flexShrink: 0,
     paddingHorizontal: Spacing.base,
     paddingVertical: Spacing.sm,
     borderRadius: Radius.xl,

@@ -32,7 +32,7 @@ import {
 } from "../database/budget";
 import { getAllCategories } from "../database/categories";
 import { getMonthEnd, getMonthStart } from "../utils/date";
-import { formatKoboAmount, nairaToKobo, parseNairaAmount } from "../utils/money";
+import { formatKoboAmount, nairaToKobo, parseNairaAmount, formatAmountInput } from "../utils/money";
 import {
   calculateBudgetProgress,
   getBudgetRemainingText,
@@ -84,7 +84,7 @@ export default function BudgetFormScreen() {
         setSelectedCategory(
           cats.find((c) => c.id === existing.category_id) ?? null
         );
-        setAmount((existing.limit_amount / 100).toString());
+        setAmount(formatAmountInput((existing.limit_amount / 100).toString()));
       }
     } catch (e) {
       console.warn("Failed to load budget:", e);
@@ -301,7 +301,7 @@ export default function BudgetFormScreen() {
                     keyboardType="decimal-pad"
                     value={amount}
                     onChangeText={(t) => {
-                      setAmount(t);
+                      setAmount(formatAmountInput(t));
                       setErrors((e) => ({ ...e, amount: undefined }));
                     }}
                     error={errors.amount}

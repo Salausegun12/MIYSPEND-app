@@ -28,7 +28,7 @@ import { Pressed } from "../constants/motion";
 import { INCOME_SOURCE_ICONS } from "../constants/income";
 import { addIncome } from "../database/income";
 import { getTodayString } from "../utils/date";
-import { nairaToKobo, parseNairaAmount } from "../utils/money";
+import { nairaToKobo, parseNairaAmount, formatAmountInput } from "../utils/money";
 import type { IncomeSource, PaymentMethod } from "../types/database";
 import { INCOME_SOURCES, PAYMENT_METHODS } from "../types/database";
 
@@ -216,7 +216,7 @@ export default function AddIncomeScreen() {
                   keyboardType="decimal-pad"
                   value={amount}
                   onChangeText={(t) => {
-                    setAmount(t);
+                    setAmount(formatAmountInput(t));
                     clearError("amount");
                   }}
                   error={errors.amount}

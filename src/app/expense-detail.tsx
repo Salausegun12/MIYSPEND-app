@@ -31,7 +31,7 @@ import {
   deleteExpense,
 } from "../database/expenses";
 import { getAllCategories } from "../database/categories";
-import { nairaToKobo, koboToNaira, parseNairaInput, formatKoboAmount } from "../utils/money";
+import { nairaToKobo, koboToNaira, parseNairaInput, formatKoboAmount, formatAmountInput } from "../utils/money";
 import type { ExpenseWithCategory, Category, PaymentMethod } from "../types/database";
 import { PAYMENT_METHODS } from "../types/database";
 
@@ -121,7 +121,7 @@ export default function ExpenseDetailScreen() {
       const exp = await getExpenseById(db, Number(id));
       if (exp) {
         setExpense(exp);
-        setAmount(String(koboToNaira(exp.amount)));
+        setAmount(formatAmountInput(String(koboToNaira(exp.amount))));
         setDescription(exp.description);
         setSelectedPaymentMethod(exp.payment_method as PaymentMethod);
         setNote(exp.note);
@@ -375,7 +375,7 @@ export default function ExpenseDetailScreen() {
                     keyboardType="decimal-pad"
                     value={amount}
                     onChangeText={(t) => {
-                      setAmount(t);
+                      setAmount(formatAmountInput(t));
                       clearError("amount");
                     }}
                     error={errors.amount}
@@ -581,7 +581,7 @@ export default function ExpenseDetailScreen() {
                 variant="secondary"
                 onPress={() => {
                   setEditing(false);
-                  setAmount(String(koboToNaira(expense.amount)));
+                  setAmount(formatAmountInput(String(koboToNaira(expense.amount))));
                   setDescription(expense.description);
                   setSelectedPaymentMethod(expense.payment_method as PaymentMethod);
                   setNote(expense.note);

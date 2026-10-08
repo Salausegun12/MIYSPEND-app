@@ -36,6 +36,7 @@ import {
   koboToNaira,
   parseNairaAmount,
   formatKoboAmount,
+  formatAmountInput,
 } from "../utils/money";
 import type { Income, IncomeSource, PaymentMethod } from "../types/database";
 import { INCOME_SOURCES, PAYMENT_METHODS } from "../types/database";
@@ -113,7 +114,7 @@ export default function IncomeDetailScreen() {
   const savingRef = useRef(false);
 
   const applyIncomeToForm = useCallback((record: Income) => {
-    setAmount(String(koboToNaira(record.amount)));
+    setAmount(formatAmountInput(String(koboToNaira(record.amount))));
     setSelectedSource(record.source as IncomeSource);
     setSelectedPaymentMethod(record.payment_method as PaymentMethod);
     setNote(record.note);
@@ -398,7 +399,7 @@ export default function IncomeDetailScreen() {
                     keyboardType="decimal-pad"
                     value={amount}
                     onChangeText={(t) => {
-                      setAmount(t);
+                      setAmount(formatAmountInput(t));
                       clearError("amount");
                     }}
                     error={errors.amount}
