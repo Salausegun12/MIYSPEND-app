@@ -55,6 +55,7 @@ const SCHEMA = `
     payment_method TEXT NOT NULL DEFAULT '',
     note TEXT NOT NULL DEFAULT '',
     date TEXT NOT NULL DEFAULT (date('now')),
+    attachment_uri TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now')),
     FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE

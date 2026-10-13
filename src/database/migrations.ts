@@ -1,6 +1,6 @@
 import type { SQLiteDatabase } from "expo-sqlite";
 
-const CURRENT_DB_VERSION = 7;
+const CURRENT_DB_VERSION = 11;
 
 const MIGRATIONS: Record<number, (db: SQLiteDatabase) => Promise<void>> = {
   1: async (db) => {
@@ -171,6 +171,55 @@ const MIGRATIONS: Record<number, (db: SQLiteDatabase) => Promise<void>> = {
     // Recurring transactions schema once lived here (v7). The feature has been
     // removed; the migration is kept as a no-op so existing databases that
     // already ran v7 keep working and new ones skip the unused tables.
+  },
+  8: async (db) => {
+    // Launch cleanup: earlier development builds left test transactions on
+    // devices (and Android was auto-restoring that database into reinstalls).
+    // Wipe all user-entered financial data exactly once so the released app
+    // starts from a clean slate. Default categories, settings and the user
+    // profile are preserved.
+    await db.execAsync(`
+      DELETE FROM expenses;
+      DELETE FROM income;
+      DELETE FROM budgets;
+      DELETE FROM contributions;
+      DELETE FROM savings_goals;
+    `);
+  },
+  9: async (db) => {
+    // The v8 launch wipe only runs once. Devices that already reported
+    // user_version 8 (for example when a build is installed on top of an older
+    // install, which keeps the existing database) skipped it, so leftover test
+    // transactions kept showing on the dashboard. This second one-time wipe
+    // guarantees a clean slate for those devices. Default categories, settings
+    // and the user profile are preserved.
+    await db.execAsync(`
+      DELETE FROM expenses;
+      DELETE FROM income;
+      DELETE FROM budgets;
+      DELETE FROM contributions;
+      DELETE FROM savings_goals;
+    `);
+  },
+  10: async (db) => {
+    // The earlier launch wipes kept the stored user profile, so devices that
+    // had already completed onboarding skipped the onboarding screens after
+    // reinstalling. Clear the saved profile and onboarding flag so the app
+    // walks through onboarding again and captures the user's name, which the
+    // home greeting then displays. Preferences such as currency are preserved.
+    await db.execAsync(`
+      DELETE FROM settings
+      WHERE key IN ('user_name', 'user_phone', 'user_email', 'onboarding_complete');
+    `);
+  },
+  11: async (db) => {
+    // Optional receipt photo. The URI points at a file copied into the app's
+    // own document storage by the attachments service; it is never uploaded.
+    // Existing expenses keep working with a null value, and financial
+    // calculations never read this column.
+    await db.execAsync(`
+      ALTER TABLE expenses ADD COLUMN attachment_uri TEXT;
+    `);
   },
 };
 

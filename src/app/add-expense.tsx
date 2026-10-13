@@ -20,6 +20,7 @@ import { Button } from "../components/ui/Button";
 import { usePopup } from "../components/popup/PopupProvider";
 import { AnimatedEntry } from "../components/ui/AnimatedEntry";
 import { Card } from "../components/ui/Card";
+import { ExpensePhotoField } from "../components/ui/ExpensePhotoField";
 import { Colors } from "../constants/colors";
 import { Radius } from "../constants/radius";
 import { Typography } from "../constants/typography";
@@ -28,6 +29,10 @@ import { Pressed } from "../constants/motion";
 import { addExpense } from "../database/expenses";
 import { getAllCategories } from "../database/categories";
 import { nairaToKobo, parseNairaInput, formatAmountInput } from "../utils/money";
+import {
+  isManagedAttachment,
+  saveAttachmentPhoto,
+} from "../services/attachments";
 import type { Category, PaymentMethod } from "../types/database";
 import { PAYMENT_METHODS } from "../types/database";
 
@@ -105,6 +110,7 @@ export default function AddExpenseScreen() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [note, setNote] = useState("");
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
 
@@ -191,6 +197,21 @@ export default function AddExpenseScreen() {
       const amountKobo = nairaToKobo(parsed);
       const dateTime = `${date} ${time}:00`;
 
+      let attachmentUri: string | null = null;
+      let photoFailed = false;
+      if (photoUri) {
+        if (isManagedAttachment(photoUri)) {
+          attachmentUri = photoUri;
+        } else {
+          const saved = await saveAttachmentPhoto({ uri: photoUri });
+          if (saved.status === "saved") {
+            attachmentUri = saved.uri;
+          } else {
+            photoFailed = true;
+          }
+        }
+      }
+
       await addExpense(db, {
         amount: amountKobo,
         category_id: selectedCategory!.id,
@@ -198,9 +219,16 @@ export default function AddExpenseScreen() {
         payment_method: selectedPaymentMethod as string,
         note: note.trim(),
         date: dateTime,
+        attachment_uri: attachmentUri,
       });
 
-      popup.success("Expense saved successfully");
+      if (photoFailed) {
+        popup.warning(
+          "Expense saved, but I couldn't store the photo on your device."
+        );
+      } else {
+        popup.success("Expense saved successfully");
+      }
       router.back();
     } catch (e) {
       console.warn("Save failed:", e);
@@ -443,6 +471,12 @@ export default function AddExpenseScreen() {
               <Text style={styles.pickerDoneText}>Done</Text>
             </Pressable>
           )}
+
+          <ExpensePhotoField
+            photoUri={photoUri}
+            onChange={setPhotoUri}
+            disabled={loading}
+          />
 
           <View>
             <Input

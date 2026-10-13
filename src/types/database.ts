@@ -15,6 +15,11 @@ export interface Expense {
   payment_method: string;
   note: string;
   date: string;
+  /**
+   * Optional local URI of a receipt photo stored on the device. Null when no
+   * photo is attached. Never uploaded and never used in financial maths.
+   */
+  attachment_uri: string | null;
   created_at: string;
   updated_at: string;
 }

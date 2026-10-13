@@ -6,6 +6,7 @@ import {
   Pressable,
   ScrollView,
   ActivityIndicator,
+  Image,
   Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -19,6 +20,7 @@ import { Button } from "../components/ui/Button";
 import { usePopup } from "../components/popup/PopupProvider";
 import { AnimatedEntry } from "../components/ui/AnimatedEntry";
 import { Card } from "../components/ui/Card";
+import { ExpensePhotoField } from "../components/ui/ExpensePhotoField";
 import { Colors } from "../constants/colors";
 import { Radius } from "../constants/radius";
 import { Shadows } from "../constants/shadows";
@@ -32,6 +34,11 @@ import {
 } from "../database/expenses";
 import { getAllCategories } from "../database/categories";
 import { nairaToKobo, koboToNaira, parseNairaInput, formatKoboAmount, formatAmountInput } from "../utils/money";
+import {
+  discardAttachmentPhoto,
+  isManagedAttachment,
+  saveAttachmentPhoto,
+} from "../services/attachments";
 import type { ExpenseWithCategory, Category, PaymentMethod } from "../types/database";
 import { PAYMENT_METHODS } from "../types/database";
 
@@ -107,6 +114,7 @@ export default function ExpenseDetailScreen() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [note, setNote] = useState("");
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
 
   const [errors, setErrors] = useState<{
     amount?: string;
@@ -127,6 +135,7 @@ export default function ExpenseDetailScreen() {
         setNote(exp.note);
         setEditDate(extractDatePart(exp.date));
         setEditTime(extractTimePart(exp.date));
+        setPhotoUri(exp.attachment_uri);
       }
       const cats = await getAllCategories(db);
       setCategories(cats);
@@ -183,6 +192,31 @@ export default function ExpenseDetailScreen() {
       const amountKobo = nairaToKobo(parsed);
       const dateTime = `${editDate} ${editTime}:00`;
 
+      let attachmentUri: string | null = expense.attachment_uri;
+      let removeOldPhoto = false;
+      let photoFailed = false;
+
+      if (photoUri === null) {
+        if (expense.attachment_uri) {
+          attachmentUri = null;
+          removeOldPhoto = true;
+        }
+      } else if (photoUri === expense.attachment_uri) {
+        attachmentUri = photoUri;
+      } else if (isManagedAttachment(photoUri)) {
+        attachmentUri = photoUri;
+        removeOldPhoto = true;
+      } else {
+        const saved = await saveAttachmentPhoto({ uri: photoUri });
+        if (saved.status === "saved") {
+          attachmentUri = saved.uri;
+          removeOldPhoto = Boolean(expense.attachment_uri);
+        } else {
+          // Keep the photo that was already there rather than losing it.
+          photoFailed = true;
+        }
+      }
+
       await updateExpense(db, expense.id, {
         amount: amountKobo,
         category_id: selectedCategory!.id,
@@ -190,11 +224,22 @@ export default function ExpenseDetailScreen() {
         payment_method: selectedPaymentMethod as string,
         note: note.trim(),
         date: dateTime,
+        attachment_uri: attachmentUri,
       });
+
+      if (removeOldPhoto && expense.attachment_uri) {
+        await discardAttachmentPhoto(expense.attachment_uri);
+      }
 
       setEditing(false);
       await loadExpense();
-      popup.success("Expense updated successfully");
+      if (photoFailed) {
+        popup.warning(
+          "Changes saved, but I couldn't store the new photo. Your previous photo was kept."
+        );
+      } else {
+        popup.success("Expense updated successfully");
+      }
     } catch (e) {
       console.warn("Failed to update expense:", e);
       popup.error("Failed to update expense. Please try again.");
@@ -214,6 +259,7 @@ export default function ExpenseDetailScreen() {
 
     try {
       await deleteExpense(db, expense.id);
+      await discardAttachmentPhoto(expense.attachment_uri);
       router.back();
     } catch (e) {
       console.warn("Failed to delete expense:", e);
@@ -362,6 +408,20 @@ export default function ExpenseDetailScreen() {
                 ) : null}
               </Card>
             </AnimatedEntry>
+
+            {expense.attachment_uri ? (
+              <AnimatedEntry delay={140}>
+                <View style={styles.photoSection}>
+                  <Text style={styles.label}>Receipt photo</Text>
+                  <Image
+                    source={{ uri: expense.attachment_uri }}
+                    style={styles.photo}
+                    resizeMode="cover"
+                    accessibilityLabel="Receipt photo"
+                  />
+                </View>
+              </AnimatedEntry>
+            ) : null}
           </>
         ) : (
           <>
@@ -563,6 +623,12 @@ export default function ExpenseDetailScreen() {
               </Pressable>
             )}
 
+            <ExpensePhotoField
+              photoUri={photoUri}
+              onChange={setPhotoUri}
+              disabled={saving}
+            />
+
             <View>
               <Input
                 label="Note (optional)"
@@ -587,6 +653,7 @@ export default function ExpenseDetailScreen() {
                   setNote(expense.note);
                   setEditDate(extractDatePart(expense.date));
                   setEditTime(extractTimePart(expense.date));
+                  setPhotoUri(expense.attachment_uri);
                   const cat = categories.find((c) => c.id === expense.category_id);
                   if (cat) setSelectedCategory(cat);
                   setErrors({});
@@ -699,6 +766,15 @@ const styles = StyleSheet.create({
   detailDivider: {
     height: 1,
     backgroundColor: Colors.border,
+  },
+  photoSection: {
+    gap: Spacing.xs,
+  },
+  photo: {
+    width: "100%",
+    height: 200,
+    borderRadius: Radius.xl,
+    backgroundColor: Colors.surfaceElevated,
   },
   label: {
     ...Typography.label,

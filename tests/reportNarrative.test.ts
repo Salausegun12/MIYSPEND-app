@@ -248,6 +248,7 @@ describe("createSpendingReportHtml", () => {
     payment_method: "Cash",
     note: "",
     date: "2026-10-06 12:30:00",
+    attachment_uri: null,
     created_at: "2026-10-06 12:31:00",
     updated_at: "2026-10-06 12:31:00",
     category_name: "Food",

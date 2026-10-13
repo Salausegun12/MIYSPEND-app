@@ -10,16 +10,18 @@ export async function addExpense(
     payment_method: string;
     note: string;
     date: string;
+    attachment_uri?: string | null;
   }
 ): Promise<number> {
   const result = await db.runAsync(
-    "INSERT INTO expenses (amount, category_id, description, payment_method, note, date) VALUES (?, ?, ?, ?, ?, ?)",
+    "INSERT INTO expenses (amount, category_id, description, payment_method, note, date, attachment_uri) VALUES (?, ?, ?, ?, ?, ?, ?)",
     expense.amount,
     expense.category_id,
     expense.description,
     expense.payment_method,
     expense.note,
-    expense.date
+    expense.date,
+    expense.attachment_uri ?? null
   );
   return result.lastInsertRowId;
 }
@@ -34,10 +36,12 @@ export async function updateExpense(
     payment_method?: string;
     note?: string;
     date?: string;
+    /** Pass null to remove the attached photo. */
+    attachment_uri?: string | null;
   }
 ): Promise<void> {
   const fields: string[] = [];
-  const values: (number | string)[] = [];
+  const values: (number | string | null)[] = [];
 
   if (expense.amount !== undefined) {
     fields.push("amount = ?");
@@ -62,6 +66,10 @@ export async function updateExpense(
   if (expense.date !== undefined) {
     fields.push("date = ?");
     values.push(expense.date);
+  }
+  if (expense.attachment_uri !== undefined) {
+    fields.push("attachment_uri = ?");
+    values.push(expense.attachment_uri);
   }
 
   if (fields.length === 0) return;

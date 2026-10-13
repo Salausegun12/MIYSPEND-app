@@ -34,6 +34,14 @@
     "plugins": [
       "@react-native-community/datetimepicker",
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow MiySpend to access your photos so you can attach a receipt to an expense.",
+          "cameraPermission": "Allow MiySpend to use your camera so you can snap a receipt for an expense.",
+          "microphonePermission": false
+        }
+      ],
+      [
         "expo-notifications",
         {
           "icon": "./assets/icon.png",

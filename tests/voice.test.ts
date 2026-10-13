@@ -76,6 +76,7 @@ class TestDb {
         payment_method TEXT NOT NULL DEFAULT '',
         note TEXT NOT NULL DEFAULT '',
         date TEXT NOT NULL,
+        attachment_uri TEXT,
         created_at TEXT NOT NULL DEFAULT (datetime('now')),
         updated_at TEXT NOT NULL DEFAULT (datetime('now'))
       );
