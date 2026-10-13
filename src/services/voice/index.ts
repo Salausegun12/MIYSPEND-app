@@ -5,3 +5,6 @@ export * from "./planning";
 export * from "./recognizer";
 export * from "./duplicateGuard";
 export * from "./recorder";
+export * from "./responses";
+export * from "./readAloud";
+export * from "./speech";

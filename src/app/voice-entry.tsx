@@ -24,21 +24,32 @@ import { Typography } from "../constants/typography";
 import { Spacing } from "../constants/spacing";
 import { Pressed } from "../constants/motion";
 import { getAllCategories } from "../database/categories";
-import { getAllGoals } from "../database/savingsGoals";
+import {
+  getAllGoals,
+  getGoalsWithBalances,
+} from "../database/savingsGoals";
 import {
   getBudgetsWithSpending,
   getCurrentBudgetPeriod,
 } from "../database/budget";
+import { getTotalIncome } from "../database/income";
+import { getTotalExpenses } from "../database/expenses";
+import { computeInsights } from "../database/insights";
 import {
   applyBudgetAnswer,
   applyGoalAnswer,
   applyVoiceAnswer,
   buildBudgetQuestion,
+  buildBudgetScript,
   buildGoalQuestion,
+  buildGoalsScript,
+  buildInsightsScript,
   buildNextQuestion,
+  buildSpendingSummaryScript,
   confirmAndSaveBudgetDraft,
   confirmAndSaveGoalDraft,
   confirmAndSaveVoiceDraft,
+  detectReadAloudTopic,
   detectVoiceIntent,
   getVoiceRecognizer,
   offlineTranscriptRecognizer,
@@ -48,11 +59,19 @@ import {
   summarizeBudgetDraft,
   summarizeGoalDraft,
   summarizeVoiceDraft,
+  voiceCancelled,
   voiceDuplicateGuard,
+  voiceNotHeard,
+  voiceReadAloudFailed,
+  voiceReadyToReview,
+  voiceSaveFailed,
+  voiceSpokenSaveConfirmation,
 } from "../services/voice";
+import { useVoicePlayback } from "../services/voice/useVoicePlayback";
 import type {
   BudgetDraft,
   GoalDraft,
+  ReadAloudScript,
   VoiceDraft,
   VoiceIntent,
   VoiceQuestionField,
@@ -66,6 +85,8 @@ const SAMPLE_COMMANDS = [
   "Record ₦50,000 income from freelance work",
   "Set my monthly food budget to ₦40,000",
   "Create a savings goal of ₦200,000 for a laptop",
+  "How much did I spend this month?",
+  "Read my spending insights",
 ];
 
 /** A follow-up question normalised across the transaction, budget and goal flows. */
@@ -99,6 +120,15 @@ export default function VoiceEntryScreen() {
   const [answerText, setAnswerText] = useState("");
   const [answerError, setAnswerError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [insightScript, setInsightScript] = useState<ReadAloudScript | null>(
+    null
+  );
+
+  const handleUnavailable = useCallback(
+    (message: string) => popup.info(message),
+    [popup]
+  );
+  const playback = useVoicePlayback({ onUnavailable: handleUnavailable });
 
   const savingRef = useRef(false);
   const categoriesRef = useRef<Category[]>([]);
@@ -130,11 +160,57 @@ export default function VoiceEntryScreen() {
     };
   }, [db]);
 
+  /**
+   * Answers a read-only question from data the app already has. The user asked
+   * for this aloud, so the answer is spoken and also shown on screen; nothing
+   * sensitive is ever read without this explicit request.
+   */
+  const prepareInsightAnswer = useCallback(
+    async (text: string) => {
+      const topic = detectReadAloudTopic(text);
+      const monthStart = getMonthStart();
+      const monthEnd = getMonthEnd();
+      try {
+        let script: ReadAloudScript;
+        if (topic === "budgets") {
+          const budgets = await getBudgetsWithSpending(
+            db,
+            getCurrentBudgetPeriod(monthStart, monthEnd)
+          );
+          script = buildBudgetScript(budgets);
+        } else if (topic === "goals") {
+          const goals = await getGoalsWithBalances(db);
+          script = buildGoalsScript(goals);
+        } else if (topic === "spending") {
+          const [income, expenses] = await Promise.all([
+            getTotalIncome(db, monthStart, monthEnd),
+            getTotalExpenses(db, `${monthStart} 00:00:00`, `${monthEnd} 23:59:59`),
+          ]);
+          script = buildSpendingSummaryScript({
+            label: "this month",
+            totalIncomeKobo: income,
+            totalExpensesKobo: expenses,
+          });
+        } else {
+          const insights = await computeInsights(db);
+          script = buildInsightsScript(insights);
+        }
+        setInsightScript(script);
+        void playback.play(script.text);
+      } catch (e) {
+        console.warn("Failed to prepare read-aloud:", e);
+        popup.error(voiceReadAloudFailed());
+        reset();
+      }
+    },
+    [db, playback, popup]
+  );
+
   const handleTranscript = useCallback(
     (text: string) => {
       const clean = text.trim();
       if (!clean) {
-        popup.warning("I didn't catch that. Please try again.");
+        popup.warning(voiceNotHeard());
         setListening(false);
         return;
       }
@@ -145,7 +221,15 @@ export default function VoiceEntryScreen() {
       setAnswerError(null);
 
       const intent = detectVoiceIntent(clean);
-      if (intent === "budget") {
+      setInsightScript(null);
+      if (intent === "insight") {
+        setMode("insight");
+        setTransactionDraft(null);
+        setBudgetDraft(null);
+        setGoalDraft(null);
+        setQuestion(null);
+        void prepareInsightAnswer(clean);
+      } else if (intent === "budget") {
         const parsed = parseBudgetCommand(clean, {
           categories: categoriesRef.current,
         });
@@ -173,7 +257,7 @@ export default function VoiceEntryScreen() {
       }
       setListening(false);
     },
-    [popup]
+    [prepareInsightAnswer, popup]
   );
 
   useEffect(() => {
@@ -285,12 +369,14 @@ export default function VoiceEntryScreen() {
     setAnswerAmount("");
     setAnswerText("");
     setAnswerError(null);
+    setInsightScript(null);
     setListening(false);
+    void playback.stop();
   }
 
   function cancel() {
     reset();
-    popup.info("Cancelled");
+    popup.info(voiceCancelled());
   }
 
   const confirm = useCallback(async () => {
@@ -321,6 +407,14 @@ export default function VoiceEntryScreen() {
 
       if (!result) return;
 
+      // A calm spoken confirmation that never includes figures. The detailed
+      // result message stays on screen for the user to read.
+      void playback.play(
+        voiceSpokenSaveConfirmation(
+          result.status as "saved" | "duplicate" | "duplicate_goal" | "unknown_goal" | "incomplete"
+        )
+      );
+
       if (result.status === "saved") {
         popup.success(result.message);
         router.back();
@@ -334,14 +428,30 @@ export default function VoiceEntryScreen() {
       popup.error(result.message);
     } catch (e) {
       console.warn("Voice save failed:", e);
-      popup.error("Could not save this. Please try again.");
+      popup.error(voiceSaveFailed());
     } finally {
       savingRef.current = false;
       setSaving(false);
     }
-  }, [db, mode, budgetDraft, goalDraft, transactionDraft, popup, router]);
+  }, [
+    db,
+    mode,
+    budgetDraft,
+    goalDraft,
+    transactionDraft,
+    popup,
+    router,
+    playback,
+  ]);
 
-  const step = !mode ? "capture" : question ? "question" : "review";
+  const step =
+    mode === "insight"
+      ? "answer"
+      : !mode
+        ? "capture"
+        : question
+          ? "question"
+          : "review";
 
   const summaryRows: VoiceSummaryRow[] =
     mode === "budget" && budgetDraft
@@ -413,6 +523,23 @@ export default function VoiceEntryScreen() {
               Works offline. Nothing leaves your device.
             </Text>
           </View>
+
+          {playback.speaking && (
+            <AnimatedEntry delay={20}>
+              <Pressable
+                onPress={() => void playback.stop()}
+                style={({ pressed }) => [
+                  styles.stopSpeech,
+                  pressed && Pressed.default,
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel="Stop reading aloud"
+              >
+                <Ionicons name="stop-circle-outline" size={18} color={Colors.textPrimary} />
+                <Text style={styles.stopSpeechText}>Stop reading</Text>
+              </Pressable>
+            </AnimatedEntry>
+          )}
 
           {step === "capture" && (
             <AnimatedEntry delay={60}>
@@ -612,6 +739,65 @@ export default function VoiceEntryScreen() {
                     onPress={cancel}
                     disabled={saving}
                   />
+                  <Button
+                    title="Read my summary"
+                    variant="secondary"
+                    onPress={() => void playback.play(voiceReadyToReview())}
+                    disabled={saving}
+                  />
+                </View>
+              </AnimatedEntry>
+            </AnimatedEntry>
+          )}
+
+          {step === "answer" && (
+            <AnimatedEntry delay={60}>
+              <Card style={styles.card}>
+                <View style={styles.reviewHeader}>
+                  <View
+                    style={[
+                      styles.reviewBadge,
+                      { backgroundColor: Colors.primarySoft },
+                    ]}
+                  >
+                    <Ionicons name="volume-high-outline" size={22} color={Colors.primary} />
+                  </View>
+                  <View style={styles.reviewHeaderText}>
+                    <Text style={styles.reviewTitle}>Here's what I found</Text>
+                    <Text style={styles.youSaid} numberOfLines={2}>
+                      “{transcript}”
+                    </Text>
+                  </View>
+                </View>
+
+                {insightScript ? (
+                  <Text style={styles.answerText}>{insightScript.text}</Text>
+                ) : (
+                  <View style={styles.insightsLoading}>
+                    <ActivityIndicator size="small" color={Colors.primary} />
+                    <Text style={styles.insightsLoadingText}>
+                      Looking that up...
+                    </Text>
+                  </View>
+                )}
+
+                {insightScript && (
+                  <Button
+                    title={playback.speaking ? "Read again" : "Read aloud"}
+                    variant="secondary"
+                    onPress={() => void playback.play(insightScript.text)}
+                  />
+                )}
+              </Card>
+
+              <AnimatedEntry delay={90}>
+                <View style={styles.footer}>
+                  <Button title="Ask something else" onPress={reset} />
+                  <Button
+                    title="Done"
+                    variant="secondary"
+                    onPress={() => router.back()}
+                  />
                 </View>
               </AnimatedEntry>
             </AnimatedEntry>
@@ -669,6 +855,36 @@ const styles = StyleSheet.create({
   offlineNoteText: {
     ...Typography.caption,
     color: Colors.primary,
+  },
+  stopSpeech: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "center",
+    gap: Spacing.xs,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: Radius.xl,
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.md,
+  },
+  stopSpeechText: {
+    ...Typography.caption,
+    color: Colors.textPrimary,
+  },
+  answerText: {
+    ...Typography.bodyMedium,
+    color: Colors.textPrimary,
+    lineHeight: 24,
+  },
+  insightsLoading: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+  },
+  insightsLoadingText: {
+    ...Typography.bodySmall,
+    color: Colors.textSecondary,
   },
   captureBlock: {
     gap: Spacing.base,

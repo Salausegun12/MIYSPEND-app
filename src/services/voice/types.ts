@@ -96,9 +96,10 @@ export interface VoiceRecognizer {
 /**
  * Which family of command a transcript belongs to. The transaction flow
  * records expenses and income; budget and goal commands change a monthly
- * category limit or a savings goal instead.
+ * category limit or a savings goal instead; insight commands are read-only
+ * questions about data already recorded (never a financial change).
  */
-export type VoiceIntent = "transaction" | "budget" | "goal";
+export type VoiceIntent = "transaction" | "budget" | "goal" | "insight";
 
 /**
  * A partially- or fully-interpreted request to create or update a monthly
@@ -169,4 +170,66 @@ export interface PlanningSaveResult {
   id?: number;
   /** True when an existing record was updated rather than created. */
   updated?: boolean;
+}
+
+/* ------------------------------------------------------- read-aloud (speech) */
+
+export type VoiceSpeechErrorKind = "unavailable" | "failed";
+
+export interface VoiceSpeechError {
+  kind: VoiceSpeechErrorKind;
+  message: string;
+}
+
+export type VoiceSpeakerEvent =
+  | { type: "start"; text: string }
+  | { type: "done"; text: string; interrupted: boolean }
+  | { type: "stopped" }
+  | { type: "error"; error: VoiceSpeechError };
+
+export interface VoiceSpeechOptions {
+  /** 1.0 is the device default; the assistant asks for a slightly calmer rate. */
+  rate?: number;
+  pitch?: number;
+  /** IETF BCP 47 language tag. */
+  language?: string;
+}
+
+/**
+ * The text-to-speech contract the app depends on. A speaker may be backed by an
+ * on-device engine, but it must never send text to a network service. When no
+ * engine is available the app falls back to a speaker that reports itself as
+ * unavailable, and the screens show the words on screen instead.
+ */
+export interface VoiceSpeaker {
+  readonly id: string;
+  readonly label: string;
+  /** True when speech is produced entirely on the device. */
+  readonly offline: boolean;
+  isAvailable(): Promise<boolean>;
+  /** Synchronous best-effort flag for rendering a stop button. */
+  isSpeaking(): boolean;
+  speak(text: string, options?: VoiceSpeechOptions): Promise<void>;
+  stop(): Promise<void>;
+  subscribe(listener: (event: VoiceSpeakerEvent) => void): () => void;
+}
+
+/** The kind of recorded data a read-aloud request should describe. */
+export type ReadAloudTopic =
+  | "spending"
+  | "insights"
+  | "budgets"
+  | "goals"
+  | "overview";
+
+/**
+ * A ready-to-speak answer to a read-only voice question. `text` is shown on
+ * screen as well as optionally spoken, so the feature still works when no
+ * text-to-speech engine is available.
+ */
+export interface ReadAloudScript {
+  topic: ReadAloudTopic;
+  text: string;
+  /** True when nothing relevant had been recorded yet. */
+  empty: boolean;
 }

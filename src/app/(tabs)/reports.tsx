@@ -69,6 +69,8 @@ import {
   ReportDownloadError,
 } from "../../utils/reportDownload";
 import { computeInsights } from "../../database/insights";
+import { buildInsightsScript } from "../../services/voice/readAloud";
+import { useVoicePlayback } from "../../services/voice/useVoicePlayback";
 import type {
   ExpenseWithCategory,
   IncomeSource,
@@ -140,6 +142,13 @@ export default function ReportsScreen() {
   const [reportFeedback, setReportFeedback] = useState<string | null>(null);
   const [insights, setInsights] = useState<Insight[]>([]);
   const [insightsLoading, setInsightsLoading] = useState(true);
+
+  const handleSpeechUnavailable = useCallback((message: string) => {
+    setReportFeedback(message);
+  }, []);
+  const insightsPlayback = useVoicePlayback({
+    onUnavailable: handleSpeechUnavailable,
+  });
 
   const weekSunday = useMemo(
     () => getWeekEndForDate(selectedMonday),
@@ -805,6 +814,34 @@ export default function ReportsScreen() {
                 Based on your recorded transactions this month
               </Text>
             </View>
+            <Pressable
+              onPress={() => {
+                if (insightsPlayback.speaking) {
+                  void insightsPlayback.stop();
+                } else {
+                  void insightsPlayback.play(buildInsightsScript(insights).text);
+                }
+              }}
+              style={({ pressed }) => [
+                styles.insightsListen,
+                pressed && Pressed.default,
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel={
+                insightsPlayback.speaking
+                  ? "Stop reading insights aloud"
+                  : "Read insights aloud"
+              }
+            >
+              <Ionicons
+                name={insightsPlayback.speaking ? "stop" : "volume-high-outline"}
+                size={16}
+                color={Colors.primary}
+              />
+              <Text style={styles.insightsListenText}>
+                {insightsPlayback.speaking ? "Stop" : "Listen"}
+              </Text>
+            </Pressable>
           </View>
 
           {insightsLoading ? (
@@ -1184,6 +1221,19 @@ const styles = StyleSheet.create({
   insightsHeaderText: {
     flex: 1,
     gap: Spacing.xs,
+  },
+  insightsListen: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.xs,
+    backgroundColor: Colors.primarySoft,
+    borderRadius: Radius.xl,
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.md,
+  },
+  insightsListenText: {
+    ...Typography.caption,
+    color: Colors.primary,
   },
   insightsSubtitle: {
     ...Typography.bodySmall,
