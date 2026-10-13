@@ -90,3 +90,83 @@ export interface VoiceRecognizer {
   cancel(): Promise<void>;
   subscribe(listener: (event: VoiceRecognizerEvent) => void): () => void;
 }
+
+/* ------------------------------------------------- planning (budget/goals) */
+
+/**
+ * Which family of command a transcript belongs to. The transaction flow
+ * records expenses and income; budget and goal commands change a monthly
+ * category limit or a savings goal instead.
+ */
+export type VoiceIntent = "transaction" | "budget" | "goal";
+
+/**
+ * A partially- or fully-interpreted request to create or update a monthly
+ * category budget. `categoryId` and `amountKobo` are null until clarified.
+ */
+export interface BudgetDraft {
+  intent: "budget";
+  /** Integer kobo, or null when no usable limit was found. */
+  amountKobo: number | null;
+  categoryId: number | null;
+  categoryName: string | null;
+  /** The original transcript, kept for the summary and duplicate checks. */
+  raw: string;
+}
+
+/**
+ * A partially- or fully-interpreted savings-goal request. `mode` is "update"
+ * when the command asked to change an existing goal (or named one that already
+ * exists), and "create" otherwise.
+ */
+export interface GoalDraft {
+  intent: "goal";
+  mode: "create" | "update";
+  /** Resolved goal id when the command named an existing goal. */
+  goalId: number | null;
+  goalName: string | null;
+  /** Integer kobo, or null when no usable target was found. */
+  targetAmountKobo: number | null;
+  /** The original transcript, kept for the summary and duplicate checks. */
+  raw: string;
+}
+
+export type PlanningQuestionField =
+  | "amount"
+  | "category"
+  | "goal"
+  | "goalName";
+
+/**
+ * A follow-up for a budget or goal command. `kind` tells the UI whether to
+ * render choice chips, a numeric field ("amount"), or a free-text field
+ * ("text", used for the goal name).
+ */
+export interface PlanningQuestion {
+  field: PlanningQuestionField;
+  prompt: string;
+  kind: "choice" | "amount" | "text";
+  options?: VoiceQuestionOption[];
+}
+
+/**
+ * Result of saving a budget or goal draft. Besides the shared saved/duplicate/
+ * incomplete states, goal updates can reference a goal that no longer exists
+ * ("unknown_goal") or try to create one whose name is already taken
+ * ("duplicate_goal").
+ */
+export type PlanningSaveStatus =
+  | "saved"
+  | "duplicate"
+  | "incomplete"
+  | "unknown_goal"
+  | "duplicate_goal";
+
+export interface PlanningSaveResult {
+  status: PlanningSaveStatus;
+  message: string;
+  /** Row id of the affected record when status is "saved". */
+  id?: number;
+  /** True when an existing record was updated rather than created. */
+  updated?: boolean;
+}

@@ -292,14 +292,14 @@ export default function HomeScreen() {
             onPress={() => router.push("/voice-entry" as unknown as Href)}
             style={({ pressed }) => [styles.voiceBtn, pressed && Pressed.default]}
             accessibilityRole="button"
-            accessibilityLabel="Record an expense or income by voice"
+            accessibilityLabel="Record a transaction, budget or savings goal by voice"
           >
             <View style={styles.voiceIconWrap}>
               <Ionicons name="mic" size={18} color={Colors.white} />
             </View>
             <View style={styles.voiceTextWrap}>
               <Text style={styles.voiceTitle}>Speak to record</Text>
-              <Text style={styles.voiceSubtitle}>Say an expense or income in your own words</Text>
+              <Text style={styles.voiceSubtitle}>Record transactions, budgets or savings goals by voice</Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color={Colors.primary} />
           </Pressable>

@@ -24,23 +24,57 @@ import { Typography } from "../constants/typography";
 import { Spacing } from "../constants/spacing";
 import { Pressed } from "../constants/motion";
 import { getAllCategories } from "../database/categories";
+import { getAllGoals } from "../database/savingsGoals";
 import {
+  getBudgetsWithSpending,
+  getCurrentBudgetPeriod,
+} from "../database/budget";
+import {
+  applyBudgetAnswer,
+  applyGoalAnswer,
   applyVoiceAnswer,
+  buildBudgetQuestion,
+  buildGoalQuestion,
   buildNextQuestion,
+  confirmAndSaveBudgetDraft,
+  confirmAndSaveGoalDraft,
+  confirmAndSaveVoiceDraft,
+  detectVoiceIntent,
+  getVoiceRecognizer,
   offlineTranscriptRecognizer,
+  parseBudgetCommand,
+  parseGoalCommand,
   parseVoiceCommand,
+  summarizeBudgetDraft,
+  summarizeGoalDraft,
   summarizeVoiceDraft,
   voiceDuplicateGuard,
 } from "../services/voice";
-import { confirmAndSaveVoiceDraft } from "../services/voice/recorder";
-import { getVoiceRecognizer } from "../services/voice/recognizer";
-import type { VoiceDraft, VoiceQuestion } from "../services/voice/types";
-import type { Category } from "../types/database";
+import type {
+  BudgetDraft,
+  GoalDraft,
+  VoiceDraft,
+  VoiceIntent,
+  VoiceQuestionField,
+  VoiceSummaryRow,
+} from "../services/voice/types";
+import type { Category, SavingsGoal } from "../types/database";
+import { getMonthEnd, getMonthStart } from "../utils/date";
 
 const SAMPLE_COMMANDS = [
   "I spent ₦3,000 on food today",
   "Record ₦50,000 income from freelance work",
+  "Set my monthly food budget to ₦40,000",
+  "Create a savings goal of ₦200,000 for a laptop",
 ];
+
+/** A follow-up question normalised across the transaction, budget and goal flows. */
+interface ScreenQuestion {
+  field: string;
+  prompt: string;
+  kind: "choice" | "amount" | "text";
+  options?: { label: string; value: string; detail?: string }[];
+}
 
 export default function VoiceEntryScreen() {
   const router = useRouter();
@@ -48,47 +82,99 @@ export default function VoiceEntryScreen() {
   const popup = usePopup();
 
   const [categories, setCategories] = useState<Category[]>([]);
+  const [goals, setGoals] = useState<SavingsGoal[]>([]);
+  const [existingBudgetCategoryIds, setExistingBudgetCategoryIds] = useState<
+    Set<number>
+  >(new Set());
   const [transcript, setTranscript] = useState("");
   const [listening, setListening] = useState(false);
-  const [draft, setDraft] = useState<VoiceDraft | null>(null);
-  const [question, setQuestion] = useState<VoiceQuestion | null>(null);
+  const [mode, setMode] = useState<VoiceIntent | null>(null);
+  const [transactionDraft, setTransactionDraft] = useState<VoiceDraft | null>(
+    null
+  );
+  const [budgetDraft, setBudgetDraft] = useState<BudgetDraft | null>(null);
+  const [goalDraft, setGoalDraft] = useState<GoalDraft | null>(null);
+  const [question, setQuestion] = useState<ScreenQuestion | null>(null);
   const [answerAmount, setAnswerAmount] = useState("");
+  const [answerText, setAnswerText] = useState("");
   const [answerError, setAnswerError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   const savingRef = useRef(false);
   const categoriesRef = useRef<Category[]>([]);
   categoriesRef.current = categories;
+  const goalsRef = useRef<SavingsGoal[]>([]);
+  goalsRef.current = goals;
 
   useEffect(() => {
     let cancelled = false;
-    getAllCategories(db)
-      .then((cats) => {
-        if (!cancelled) setCategories(cats);
+    Promise.all([
+      getAllCategories(db),
+      getAllGoals(db),
+      getBudgetsWithSpending(
+        db,
+        getCurrentBudgetPeriod(getMonthStart(), getMonthEnd())
+      ),
+    ])
+      .then(([cats, goalList, budgets]) => {
+        if (cancelled) return;
+        setCategories(cats);
+        setGoals(goalList);
+        setExistingBudgetCategoryIds(
+          new Set(budgets.map((budget) => budget.category_id))
+        );
       })
-      .catch((e) => console.warn("Failed to load categories:", e));
+      .catch((e) => console.warn("Failed to load voice command data:", e));
     return () => {
       cancelled = true;
     };
   }, [db]);
 
-  const handleTranscript = useCallback((text: string) => {
-    const clean = text.trim();
-    if (!clean) {
-      popup.warning("I didn't catch that. Please try again.");
+  const handleTranscript = useCallback(
+    (text: string) => {
+      const clean = text.trim();
+      if (!clean) {
+        popup.warning("I didn't catch that. Please try again.");
+        setListening(false);
+        return;
+      }
+
+      setTranscript(clean);
+      setAnswerAmount("");
+      setAnswerText("");
+      setAnswerError(null);
+
+      const intent = detectVoiceIntent(clean);
+      if (intent === "budget") {
+        const parsed = parseBudgetCommand(clean, {
+          categories: categoriesRef.current,
+        });
+        setMode("budget");
+        setBudgetDraft(parsed);
+        setTransactionDraft(null);
+        setGoalDraft(null);
+        setQuestion(buildBudgetQuestion(parsed, categoriesRef.current));
+      } else if (intent === "goal") {
+        const parsed = parseGoalCommand(clean, { goals: goalsRef.current });
+        setMode("goal");
+        setGoalDraft(parsed);
+        setTransactionDraft(null);
+        setBudgetDraft(null);
+        setQuestion(buildGoalQuestion(parsed, goalsRef.current));
+      } else {
+        const parsed = parseVoiceCommand(clean, {
+          categories: categoriesRef.current,
+        });
+        setMode("transaction");
+        setTransactionDraft(parsed);
+        setBudgetDraft(null);
+        setGoalDraft(null);
+        setQuestion(buildNextQuestion(parsed, categoriesRef.current));
+      }
       setListening(false);
-      return;
-    }
-    const parsed = parseVoiceCommand(clean, {
-      categories: categoriesRef.current,
-    });
-    setTranscript(clean);
-    setDraft(parsed);
-    setQuestion(buildNextQuestion(parsed, categoriesRef.current));
-    setAnswerAmount("");
-    setAnswerError(null);
-    setListening(false);
-  }, [popup]);
+    },
+    [popup]
+  );
 
   useEffect(() => {
     const recognizer = getVoiceRecognizer();
@@ -130,22 +216,46 @@ export default function VoiceEntryScreen() {
     submitTranscript(transcript);
   }
 
-  const answerQuestion = useCallback(
-    (value: string) => {
-      if (!draft || !question) return;
-      const next = applyVoiceAnswer(
-        draft,
+  function answerQuestion(value: string) {
+    setAnswerAmount("");
+    setAnswerText("");
+    setAnswerError(null);
+
+    if (mode === "budget" && budgetDraft && question) {
+      const next = applyBudgetAnswer(
+        budgetDraft,
         question.field,
         value,
         categoriesRef.current
       );
-      setDraft(next);
+      setBudgetDraft(next);
+      setQuestion(buildBudgetQuestion(next, categoriesRef.current));
+      return;
+    }
+
+    if (mode === "goal" && goalDraft && question) {
+      const next = applyGoalAnswer(
+        goalDraft,
+        question.field,
+        value,
+        goalsRef.current
+      );
+      setGoalDraft(next);
+      setQuestion(buildGoalQuestion(next, goalsRef.current));
+      return;
+    }
+
+    if (mode === "transaction" && transactionDraft && question) {
+      const next = applyVoiceAnswer(
+        transactionDraft,
+        question.field as VoiceQuestionField,
+        value,
+        categoriesRef.current
+      );
+      setTransactionDraft(next);
       setQuestion(buildNextQuestion(next, categoriesRef.current));
-      setAnswerAmount("");
-      setAnswerError(null);
-    },
-    [draft, question]
-  );
+    }
+  }
 
   function submitAmount() {
     const parsed = Number(answerAmount.replace(/[₦,\s]/g, ""));
@@ -156,11 +266,24 @@ export default function VoiceEntryScreen() {
     answerQuestion(String(parsed));
   }
 
+  function submitText() {
+    const value = answerText.trim();
+    if (!value) {
+      setAnswerError("Enter a name");
+      return;
+    }
+    answerQuestion(value);
+  }
+
   function reset() {
     setTranscript("");
-    setDraft(null);
+    setMode(null);
+    setTransactionDraft(null);
+    setBudgetDraft(null);
+    setGoalDraft(null);
     setQuestion(null);
     setAnswerAmount("");
+    setAnswerText("");
     setAnswerError(null);
     setListening(false);
   }
@@ -171,22 +294,39 @@ export default function VoiceEntryScreen() {
   }
 
   const confirm = useCallback(async () => {
-    if (!draft) return;
     if (savingRef.current) return;
     savingRef.current = true;
     setSaving(true);
     try {
-      const result = await confirmAndSaveVoiceDraft(
-        db,
-        draft,
-        voiceDuplicateGuard
-      );
+      let result: { status: string; message: string } | null = null;
+      if (mode === "budget" && budgetDraft) {
+        result = await confirmAndSaveBudgetDraft(
+          db,
+          budgetDraft,
+          voiceDuplicateGuard
+        );
+      } else if (mode === "goal" && goalDraft) {
+        result = await confirmAndSaveGoalDraft(
+          db,
+          goalDraft,
+          voiceDuplicateGuard
+        );
+      } else if (mode === "transaction" && transactionDraft) {
+        result = await confirmAndSaveVoiceDraft(
+          db,
+          transactionDraft,
+          voiceDuplicateGuard
+        );
+      }
+
+      if (!result) return;
+
       if (result.status === "saved") {
         popup.success(result.message);
         router.back();
         return;
       }
-      if (result.status === "duplicate") {
+      if (result.status === "duplicate" || result.status === "duplicate_goal") {
         popup.warning(result.message);
         reset();
         return;
@@ -194,14 +334,52 @@ export default function VoiceEntryScreen() {
       popup.error(result.message);
     } catch (e) {
       console.warn("Voice save failed:", e);
-      popup.error("Could not save this entry. Please try again.");
+      popup.error("Could not save this. Please try again.");
     } finally {
       savingRef.current = false;
       setSaving(false);
     }
-  }, [db, draft, popup, router]);
+  }, [db, mode, budgetDraft, goalDraft, transactionDraft, popup, router]);
 
-  const step = !draft ? "capture" : question ? "question" : "review";
+  const step = !mode ? "capture" : question ? "question" : "review";
+
+  const summaryRows: VoiceSummaryRow[] =
+    mode === "budget" && budgetDraft
+      ? summarizeBudgetDraft(
+          budgetDraft,
+          budgetDraft.categoryId !== null &&
+            existingBudgetCategoryIds.has(budgetDraft.categoryId)
+        )
+      : mode === "goal" && goalDraft
+        ? summarizeGoalDraft(goalDraft)
+        : transactionDraft
+          ? summarizeVoiceDraft(transactionDraft)
+          : [];
+
+  const reviewIcon: keyof typeof Ionicons.glyphMap =
+    mode === "budget"
+      ? "pie-chart"
+      : mode === "goal"
+        ? "flag"
+        : transactionDraft?.type === "income"
+          ? "arrow-down-circle"
+          : "arrow-up-circle";
+  const reviewColor =
+    mode === "budget"
+      ? Colors.primary
+      : mode === "goal"
+        ? Colors.accent.gold
+        : transactionDraft?.type === "income"
+          ? Colors.success
+          : Colors.warning;
+  const reviewBackground =
+    mode === "budget"
+      ? Colors.primarySoft
+      : mode === "goal"
+        ? Colors.accent.goldSoft
+        : transactionDraft?.type === "income"
+          ? Colors.successSoft
+          : Colors.warningSoft;
 
   return (
     <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
@@ -219,7 +397,7 @@ export default function VoiceEntryScreen() {
             >
               <Ionicons name="close" size={24} color={Colors.textPrimary} />
             </Pressable>
-            <Text style={styles.headerTitle}>Voice Entry</Text>
+            <Text style={styles.headerTitle}>Voice Assistant</Text>
           </View>
         </AnimatedEntry>
 
@@ -262,8 +440,8 @@ export default function VoiceEntryScreen() {
                 </Text>
 
                 <Input
-                  label="Or type what happened"
-                  placeholder="e.g. I spent ₦3,000 on food today"
+                  label="Or type what you want to do"
+                  placeholder="e.g. Set my monthly food budget to ₦40,000"
                   value={transcript}
                   onChangeText={(t) => {
                     setTranscript(t);
@@ -285,9 +463,7 @@ export default function VoiceEntryScreen() {
                   {SAMPLE_COMMANDS.map((sample) => (
                     <Pressable
                       key={sample}
-                      onPress={() =>
-                        submitTranscript(sample)
-                      }
+                      onPress={() => submitTranscript(sample)}
                       style={({ pressed }) => [
                         styles.sampleChip,
                         pressed && Pressed.default,
@@ -360,6 +536,25 @@ export default function VoiceEntryScreen() {
                   </View>
                 )}
 
+                {question.kind === "text" && (
+                  <View style={styles.amountBlock}>
+                    <Input
+                      placeholder="Goal name"
+                      value={answerText}
+                      onChangeText={(t) => {
+                        setAnswerText(t);
+                        setAnswerError(null);
+                      }}
+                      onSubmitEditing={submitText}
+                      returnKeyType="done"
+                      error={answerError ?? undefined}
+                      autoFocus
+                      autoCapitalize="sentences"
+                    />
+                    <Button title="Continue" onPress={submitText} />
+                  </View>
+                )}
+
                 <View style={styles.questionActions}>
                   <Button
                     title="Cancel"
@@ -371,34 +566,17 @@ export default function VoiceEntryScreen() {
             </AnimatedEntry>
           )}
 
-          {step === "review" && draft && (
+          {step === "review" && (
             <AnimatedEntry delay={60}>
               <Card style={styles.card}>
                 <View style={styles.reviewHeader}>
                   <View
                     style={[
                       styles.reviewBadge,
-                      {
-                        backgroundColor:
-                          draft.type === "income"
-                            ? Colors.successSoft
-                            : Colors.warningSoft,
-                      },
+                      { backgroundColor: reviewBackground },
                     ]}
                   >
-                    <Ionicons
-                      name={
-                        draft.type === "income"
-                          ? "arrow-down-circle"
-                          : "arrow-up-circle"
-                      }
-                      size={22}
-                      color={
-                        draft.type === "income"
-                          ? Colors.success
-                          : Colors.warning
-                      }
-                    />
+                    <Ionicons name={reviewIcon} size={22} color={reviewColor} />
                   </View>
                   <View style={styles.reviewHeaderText}>
                     <Text style={styles.reviewTitle}>Does this look right?</Text>
@@ -409,7 +587,7 @@ export default function VoiceEntryScreen() {
                 </View>
 
                 <View style={styles.summary}>
-                  {summarizeVoiceDraft(draft).map((row) => (
+                  {summaryRows.map((row) => (
                     <View key={row.label} style={styles.summaryRow}>
                       <Text style={styles.summaryLabel}>{row.label}</Text>
                       <Text style={styles.summaryValue} numberOfLines={1}>
