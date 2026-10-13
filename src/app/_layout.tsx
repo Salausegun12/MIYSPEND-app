@@ -101,6 +101,10 @@ function RootNavigator() {
         name="search"
         options={{ presentation: "modal", animation: "slide_from_bottom" }}
       />
+      <Stack.Screen
+        name="voice-entry"
+        options={{ presentation: "modal", animation: "slide_from_bottom" }}
+      />
       <Stack.Screen name="onboarding" options={{ animation: "fade" }} />
     </Stack>
   );

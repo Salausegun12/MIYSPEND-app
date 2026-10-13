@@ -286,6 +286,25 @@ export default function HomeScreen() {
           </View>
         </AnimatedEntry>
 
+        {/* ── Voice entry ── */}
+        <AnimatedEntry delay={70}>
+          <Pressable
+            onPress={() => router.push("/voice-entry" as unknown as Href)}
+            style={({ pressed }) => [styles.voiceBtn, pressed && Pressed.default]}
+            accessibilityRole="button"
+            accessibilityLabel="Record an expense or income by voice"
+          >
+            <View style={styles.voiceIconWrap}>
+              <Ionicons name="mic" size={18} color={Colors.white} />
+            </View>
+            <View style={styles.voiceTextWrap}>
+              <Text style={styles.voiceTitle}>Speak to record</Text>
+              <Text style={styles.voiceSubtitle}>Say an expense or income in your own words</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={Colors.primary} />
+          </Pressable>
+        </AnimatedEntry>
+
         {/* ── Period summary ── */}
         <AnimatedEntry delay={80}>
           <Text style={styles.sectionTitle}>Period summary</Text>
@@ -605,6 +624,41 @@ const styles = StyleSheet.create({
   },
   quickBtnTextSoft: {
     color: Colors.primary,
+  },
+
+  // Voice entry
+  voiceBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.md,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: "#CDEFE1",
+    borderRadius: Radius.lg,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.base,
+    ...Shadows.sm,
+  },
+  voiceIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  voiceTextWrap: {
+    flex: 1,
+  },
+  voiceTitle: {
+    ...Typography.bodyMedium,
+    color: Colors.textPrimary,
+    fontFamily: "Poppins_600SemiBold",
+  },
+  voiceSubtitle: {
+    ...Typography.caption,
+    color: Colors.textSecondary,
+    marginTop: 1,
   },
 
   // Section
