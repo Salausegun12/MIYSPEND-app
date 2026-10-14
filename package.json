@@ -40,7 +40,7 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --import ./tests/register-ts-ext.mjs --test tests/insights.test.ts tests/search.test.ts tests/offline.test.ts tests/reportNarrative.test.ts tests/voice.test.ts tests/voicePlanning.test.ts tests/voiceSpeech.test.ts tests/attachments.test.ts"
+    "test": "node --experimental-strip-types --import ./tests/register-ts-ext.mjs --test tests/insights.test.ts tests/search.test.ts tests/offline.test.ts tests/reportNarrative.test.ts tests/voice.test.ts tests/voicePlanning.test.ts tests/voiceSpeech.test.ts tests/attachments.test.ts tests/gallery.test.ts"
   },
   "private": true
 }

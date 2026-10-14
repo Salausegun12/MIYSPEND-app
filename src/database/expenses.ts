@@ -144,6 +144,29 @@ export async function getExpensesByDateRange(
   );
 }
 
+/**
+ * Expenses that carry a stored receipt photo, optionally bounded to dates on
+ * or after `since` (a YYYY-MM-DD key). Used by the receipt gallery; photos are
+ * never included in downloads or financial totals.
+ */
+export async function getExpenseAttachments(
+  db: SQLiteDatabase,
+  since?: string
+): Promise<ExpenseWithCategory[]> {
+  let query = `
+    SELECT e.*, c.name as category_name, c.icon as category_icon, c.color as category_color
+    FROM expenses e
+    JOIN categories c ON e.category_id = c.id
+    WHERE e.attachment_uri IS NOT NULL AND e.attachment_uri != ''`;
+  const params: string[] = [];
+  if (since) {
+    query += " AND e.date >= ?";
+    params.push(since);
+  }
+  query += " ORDER BY e.date DESC, e.created_at DESC";
+  return db.getAllAsync<ExpenseWithCategory>(query, ...params);
+}
+
 export async function getOldestExpenseDate(
   db: SQLiteDatabase
 ): Promise<string | null> {

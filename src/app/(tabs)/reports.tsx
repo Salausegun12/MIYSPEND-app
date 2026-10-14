@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSQLiteContext } from "expo-sqlite";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter, type Href } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "../../components/ui/Button";
 import { AnimatedEntry } from "../../components/ui/AnimatedEntry";
@@ -71,6 +71,9 @@ import {
 import { computeInsights } from "../../database/insights";
 import { buildInsightsScript } from "../../services/voice/readAloud";
 import { useVoicePlayback } from "../../services/voice/useVoicePlayback";
+import { GalleryPreviewSection } from "../../components/gallery/GalleryPreviewSection";
+import { useExpenseGallery } from "../../services/gallery/useExpenseGallery";
+import type { GalleryPhoto } from "../../services/gallery";
 import type {
   ExpenseWithCategory,
   IncomeSource,
@@ -108,6 +111,7 @@ interface ReportOption {
 
 export default function ReportsScreen() {
   const db = useSQLiteContext();
+  const router = useRouter();
 
   const [loading, setLoading] = useState(true);
   const [selectedMonday, setSelectedMonday] = useState(() => {
@@ -149,6 +153,12 @@ export default function ReportsScreen() {
   const insightsPlayback = useVoicePlayback({
     onUnavailable: handleSpeechUnavailable,
   });
+  const {
+    photos: galleryPhotos,
+    loading: galleryLoading,
+    failed: galleryFailed,
+    reload: reloadGallery,
+  } = useExpenseGallery();
 
   const weekSunday = useMemo(
     () => getWeekEndForDate(selectedMonday),
@@ -361,6 +371,12 @@ export default function ReportsScreen() {
     }, [db])
   );
 
+  useFocusEffect(
+    useCallback(() => {
+      void reloadGallery();
+    }, [reloadGallery])
+  );
+
   const insightToneColor = (tone: InsightTone): string => {
     if (tone === "positive") return Colors.success;
     if (tone === "warning") return Colors.warning;
@@ -422,6 +438,19 @@ export default function ReportsScreen() {
     setSelectedReportId(id);
     setReportFeedback(null);
   }, []);
+
+  const handleOpenGalleryPhoto = useCallback(
+    (photo: GalleryPhoto) => {
+      router.push(
+        `/photo-viewer?id=${photo.id}&uri=${encodeURIComponent(photo.uri)}` as Href
+      );
+    },
+    [router]
+  );
+
+  const handleViewMoreGallery = useCallback(() => {
+    router.push(`/gallery` as Href);
+  }, [router]);
 
   const handleDownloadReport = useCallback(async () => {
     if (!selectedReport) return;
@@ -1046,13 +1075,24 @@ export default function ReportsScreen() {
                     style={styles.reportButton}
                   />
 
-                  {reportFeedback && (
+{reportFeedback && (
                     <Text style={styles.reportFeedback}>{reportFeedback}</Text>
                   )}
                 </Card>
               ) : null}
             </>
           )}
+        </AnimatedEntry>
+
+        <AnimatedEntry style={styles.gallerySection} delay={160}>
+          <GalleryPreviewSection
+            photos={galleryPhotos}
+            loading={galleryLoading}
+            failed={galleryFailed}
+            onOpenPhoto={handleOpenGalleryPhoto}
+            onViewMore={handleViewMoreGallery}
+            onRetry={() => void reloadGallery()}
+          />
         </AnimatedEntry>
 
       </ScrollView>
