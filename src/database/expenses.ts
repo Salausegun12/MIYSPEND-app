@@ -167,6 +167,63 @@ export async function getExpenseAttachments(
   return db.getAllAsync<ExpenseWithCategory>(query, ...params);
 }
 
+/** A photo-bearing expense row returned by the retention queries. */
+export interface ExpenseAttachmentRow {
+  id: number;
+  attachment_uri: string;
+}
+
+/**
+ * Photo-bearing expenses recorded before `beforeDateKey` (a YYYY-MM-DD key).
+ * Retention leaves financial rows untouched and only clears the image link.
+ */
+export async function getExpiredAttachments(
+  db: SQLiteDatabase,
+  beforeDateKey: string
+): Promise<ExpenseAttachmentRow[]> {
+  return db.getAllAsync<ExpenseAttachmentRow>(
+    `SELECT id, attachment_uri
+     FROM expenses
+     WHERE attachment_uri IS NOT NULL AND attachment_uri != ''
+       AND date < ?`,
+    beforeDateKey
+  );
+}
+
+/**
+ * Drops the photo reference on every expense recorded before `beforeDateKey`.
+ * The expense transaction itself is preserved. Returns how many rows changed.
+ */
+export async function clearExpiredAttachmentReferences(
+  db: SQLiteDatabase,
+  beforeDateKey: string
+): Promise<number> {
+  const result = await db.runAsync(
+    `UPDATE expenses
+     SET attachment_uri = NULL, updated_at = datetime('now')
+     WHERE attachment_uri IS NOT NULL AND attachment_uri != ''
+       AND date < ?`,
+    beforeDateKey
+  );
+  return result.changes;
+}
+
+/** Number of expenses (optionally excluding `exceptId`) that still use `uri`. */
+export async function countExpensesWithAttachmentUri(
+  db: SQLiteDatabase,
+  uri: string,
+  exceptId?: number
+): Promise<number> {
+  let query = "SELECT COUNT(*) as count FROM expenses WHERE attachment_uri = ?";
+  const params: (string | number)[] = [uri];
+  if (exceptId !== undefined) {
+    query += " AND id != ?";
+    params.push(exceptId);
+  }
+  const result = await db.getFirstAsync<{ count: number }>(query, ...params);
+  return result?.count ?? 0;
+}
+
 export async function getOldestExpenseDate(
   db: SQLiteDatabase
 ): Promise<string | null> {

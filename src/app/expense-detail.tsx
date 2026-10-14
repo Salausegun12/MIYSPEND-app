@@ -30,7 +30,6 @@ import { Pressed } from "../constants/motion";
 import {
   getExpenseById,
   updateExpense,
-  deleteExpense,
 } from "../database/expenses";
 import { getAllCategories } from "../database/categories";
 import { nairaToKobo, koboToNaira, parseNairaInput, formatKoboAmount, formatAmountInput } from "../utils/money";
@@ -39,6 +38,7 @@ import {
   isManagedAttachment,
   saveAttachmentPhoto,
 } from "../services/attachments";
+import { deleteExpenseWithPhoto } from "../services/retention";
 import type { ExpenseWithCategory, Category, PaymentMethod } from "../types/database";
 import { PAYMENT_METHODS } from "../types/database";
 
@@ -258,8 +258,7 @@ export default function ExpenseDetailScreen() {
     if (!confirmed || !expense) return;
 
     try {
-      await deleteExpense(db, expense.id);
-      await discardAttachmentPhoto(expense.attachment_uri);
+      await deleteExpenseWithPhoto(db, expense.id);
       router.back();
     } catch (e) {
       console.warn("Failed to delete expense:", e);

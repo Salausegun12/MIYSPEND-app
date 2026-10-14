@@ -8,6 +8,7 @@ import { Colors } from "../constants/colors";
 import { DatabaseProvider } from "../database/DatabaseProvider";
 import { PopupProvider } from "../components/popup/PopupProvider";
 import { isOnboardingComplete } from "../utils/user";
+import { usePhotoRetention } from "../services/retention/usePhotoRetention";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -16,6 +17,8 @@ function RootNavigator() {
   const segments = useSegments();
   const db = useSQLiteContext();
   const [ready, setReady] = useState(false);
+
+  usePhotoRetention();
 
   useEffect(() => {
     let cancelled = false;

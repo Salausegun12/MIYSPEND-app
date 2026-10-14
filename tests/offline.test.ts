@@ -1,7 +1,7 @@
 import { describe, it, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { DatabaseSync } from "node:sqlite";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import type { SQLiteDatabase } from "expo-sqlite";
@@ -14,6 +14,10 @@ import {
   getExpenseById,
   getAllExpenses,
   getTotalExpenses,
+  getExpenseAttachments,
+  getExpiredAttachments,
+  clearExpiredAttachmentReferences,
+  countExpensesWithAttachmentUri,
 } from "../src/database/expenses.ts";
 import {
   addIncome,
@@ -36,6 +40,29 @@ import {
 } from "../src/database/savingsGoals.ts";
 import { computeInsights } from "../src/database/insights.ts";
 import { searchTransactions } from "../src/database/search.ts";
+import {
+  pickAttachmentPhoto,
+  saveAttachmentPhoto,
+} from "../src/services/attachments/service.ts";
+import { createInMemoryAttachmentStore } from "../src/services/attachments/store.ts";
+import { createInMemoryPhotoPicker } from "../src/services/attachments/picker.ts";
+import {
+  buildExpenseGallery,
+  galleryWindowStart,
+} from "../src/services/gallery/service.ts";
+import { createInMemoryAttachmentExistence } from "../src/services/gallery/existence.ts";
+import {
+  isVoiceDraftReady,
+  parseVoiceCommand,
+  summarizeVoiceDraft,
+} from "../src/services/voice/parser.ts";
+import { detectVoiceIntent } from "../src/services/voice/intent.ts";
+import { buildInsightsScript } from "../src/services/voice/readAloud.ts";
+import { runPhotoRetention } from "../src/services/retention/service.ts";
+import { deleteExpenseWithPhoto } from "../src/services/retention/deleteExpense.ts";
+import { createSpendingReportHtml } from "../src/utils/reportExport.ts";
+import { getReportPeriods } from "../src/utils/reportPeriods.ts";
+import type { Category } from "../src/types/database.ts";
 
 const SCHEMA = `
   PRAGMA foreign_keys = ON;
@@ -330,5 +357,172 @@ describe("complete offline walkthrough (airplane mode)", () => {
 
     const [goalAfter] = await getGoalsWithBalances(d2);
     assert.equal(goalAfter?.balance, 800000);
+  });
+});
+
+describe("photo, voice and report lifecycles offline (airplane mode)", () => {
+  it("captures, saves, filters, retains, deletes and reports on photos with no network", async () => {
+    mkdirSync(dir, { recursive: true }); // the previous test's teardown removed the temp dir
+    db = new TestDb(dbPath);
+    const d = asDb();
+    const NOW = new Date("2026-09-14T09:00:00");
+
+    const foodId = await addCategory(d, { name: "Food", icon: "🍔", color: "#F59E0B" });
+    const groceries: Category = {
+      id: foodId,
+      name: "Groceries",
+      icon: "🛒",
+      color: "#22C55E",
+      sort_order: 2,
+      created_at: "2026-01-01 00:00:00",
+    };
+
+    // ------------------------------------------------- photo capture + selection
+    const store = createInMemoryAttachmentStore();
+    const picker = createInMemoryPhotoPicker((source) => ({
+      uri:
+        source === "camera"
+          ? "file:///camera/capture-tmp.jpg"
+          : "content://library/picked-tmp.jpg",
+      fileName: "tmp.jpg",
+      mimeType: "image/jpeg",
+    }));
+
+    const cameraPick = await pickAttachmentPhoto("camera", { picker, store });
+    assert.equal(cameraPick.status, "picked");
+    assert.equal(picker.requests.includes("camera"), true);
+    if (cameraPick.status !== "picked") return;
+
+    const libraryPick = await pickAttachmentPhoto("library", { picker, store });
+    assert.equal(libraryPick.status, "picked");
+    if (libraryPick.status !== "picked") return;
+
+    const savedCamera = await saveAttachmentPhoto(cameraPick.photo, { store });
+    const savedLibrary = await saveAttachmentPhoto(libraryPick.photo, { store });
+    assert.equal(savedCamera.status, "saved");
+    assert.equal(savedLibrary.status, "saved");
+    if (savedCamera.status !== "saved" || savedLibrary.status !== "saved") return;
+
+    const freshId = await addExpense(d, {
+      amount: 300000,
+      category_id: foodId,
+      description: "Fresh receipt",
+      payment_method: "Bank Transfer",
+      note: "",
+      date: "2026-09-10 09:00:00",
+      attachment_uri: savedCamera.uri,
+    });
+    const savedOld = await saveAttachmentPhoto(
+      { uri: "file:///camera/old-tmp.jpg", fileName: "old.jpg", mimeType: "image/jpeg" },
+      { store }
+    );
+    assert.equal(savedOld.status, "saved");
+    if (savedOld.status !== "saved") return;
+    const oldId = await addExpense(d, {
+      amount: 100000,
+      category_id: foodId,
+      description: "Old receipt",
+      payment_method: "Cash",
+      note: "",
+      date: "2026-08-01 09:00:00", // 44 days before NOW: outside the 28-day window
+      attachment_uri: savedOld.uri,
+    });
+
+    // ------------------------------------------- gallery filters by rolling window
+    const rows = await getExpenseAttachments(d, galleryWindowStart(NOW));
+    const existence = createInMemoryAttachmentExistence(store.uris);
+    const photos = await buildExpenseGallery(rows, existence, NOW);
+    assert.deepEqual(
+      photos.map((p) => p.id),
+      [freshId]
+    );
+
+    // ------------------------------------------------------- retention (28 days)
+    const summary = await runPhotoRetention(
+      {
+        listExpiredAttachments: (before) => getExpiredAttachments(d, before),
+        clearExpiredReferences: (before) => clearExpiredAttachmentReferences(d, before),
+        countReferences: (uri) => countExpensesWithAttachmentUri(d, uri),
+        store,
+      },
+      NOW
+    );
+    assert.equal(summary.checked, 1);
+    assert.equal(summary.filesRemoved, 1);
+    assert.equal(store.has(savedOld.uri), false);
+    assert.equal((await getExpenseById(d, oldId))?.attachment_uri, null);
+    assert.ok((await getExpenseById(d, oldId)) !== null, "expense transaction must survive");
+    assert.equal((await getExpenseById(d, freshId))?.attachment_uri, savedCamera.uri);
+
+    // ----------------------------- deleting an expense deletes its photo too (4)
+    await deleteExpenseWithPhoto(d, freshId, { store });
+    assert.equal(await getExpenseById(d, freshId), null);
+    assert.equal(store.has(savedCamera.uri), false);
+    assert.equal(store.has(savedLibrary.uri), true, "unrelated photo stays");
+
+    // ------------------------------- voice recognition + confirmation offline
+    assert.equal(detectVoiceIntent("I spent five thousand on groceries yesterday"), "transaction");
+    assert.equal(detectVoiceIntent("how much did I spend last week"), "insight");
+
+    const draft = parseVoiceCommand("I spent five thousand on groceries yesterday", {
+      categories: [groceries],
+      today: "2026-09-13",
+      now: NOW,
+    });
+    assert.equal(draft.type, "expense");
+    assert.equal(draft.amountKobo, 500000);
+    assert.equal(draft.categoryName, "Groceries");
+    assert.equal(isVoiceDraftReady(draft), true);
+
+    const confirmation = summarizeVoiceDraft(draft);
+    assert.ok(confirmation.some((row) => row.label === "Amount" && row.value.includes("5,000")));
+    assert.ok(confirmation.some((row) => row.label === "Category" && row.value === "Groceries"));
+
+    // -------------------------------------------------- spoken insights offline
+    await addIncome(d, {
+      amount: 1000000,
+      source: "Salary",
+      payment_method: "Bank Transfer",
+      note: "",
+      income_date: "2026-09-08",
+      income_time: "09:00:00",
+    });
+    await addExpense(d, {
+      amount: 200000,
+      category_id: foodId,
+      description: "Market run",
+      payment_method: "Cash",
+      note: "",
+      date: "2026-09-09 08:00:00",
+    });
+    const insights = await computeInsights(d, "2026-09-10");
+    const script = buildInsightsScript(insights);
+    assert.equal(script.empty, false);
+    assert.match(script.text, /recorded/i);
+
+    // ------------------------------------------- reports carry money only (5)
+    const reportExpenseId = await addExpense(d, {
+      amount: 100000,
+      category_id: foodId,
+      description: "Receipt meal",
+      payment_method: "POS",
+      note: "with photo",
+      date: "2026-09-12 09:00:00",
+      attachment_uri: "file:///data/user/0/com.miyspend/files/attachments/receipt-meal.jpg",
+    });
+    const reportRow = await getExpenseById(d, reportExpenseId);
+    if (!reportRow) throw new Error("report fixture missing");
+    const html = createSpendingReportHtml(
+      getReportPeriods(NOW)[0],
+      [reportRow],
+      "2026-09-01",
+      { incomes: [], budgets: [], goals: [], contributionsTotal: 0, contributionsCount: 0 },
+      NOW
+    );
+    assert.equal(html.includes("receipt-meal.jpg"), false);
+    assert.equal(html.includes("attachments"), false);
+    assert.equal(html.includes("attachment_uri"), false);
+    assert.match(html, /NGN 1,000\.00/);
+    assert.match(html, /Receipt meal/);
   });
 });
