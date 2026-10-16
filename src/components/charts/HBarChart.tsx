@@ -114,20 +114,20 @@ const styles = StyleSheet.create({
   rowTitle: {
     ...Typography.bodySmall,
     color: Colors.textPrimary,
-    fontWeight: "700",
+    fontFamily: "Poppins_700Bold",
     flexShrink: 1,
   },
   rowLabel: {
     ...Typography.caption,
     color: Colors.textSecondary,
-    fontWeight: "700",
+    fontFamily: "Poppins_700Bold",
     textTransform: "uppercase",
     letterSpacing: 0.3,
   },
   rowAmount: {
     ...Typography.bodySmall,
     color: Colors.textPrimary,
-    fontWeight: "700",
+    fontFamily: "Poppins_700Bold",
   },
   track: {
     height: 8,

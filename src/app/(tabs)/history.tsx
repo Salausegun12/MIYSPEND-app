@@ -324,6 +324,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     ...Typography.h1,
     color: Colors.textPrimary,
+    letterSpacing: -0.5,
   },
   headerSubtitle: {
     ...Typography.caption,
@@ -331,12 +332,14 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   searchButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     backgroundColor: Colors.primarySoft,
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#CDEFE1",
   },
   searchButtonPressed: Pressed.default,
   loadingContainer: {
@@ -362,12 +365,21 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.sm,
     borderRadius: Radius.xl,
     borderWidth: 1.5,
-    borderColor: Colors.border,
+    borderColor: Colors.borderLight,
     backgroundColor: Colors.surface,
+    shadowColor: "#0B1512",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
   },
   filterChipActive: {
     borderColor: Colors.primary,
     backgroundColor: Colors.primary,
+    shadowColor: Colors.primary,
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 3,
   },
   filterLabel: {
     ...Typography.label,
@@ -375,7 +387,7 @@ const styles = StyleSheet.create({
   },
   filterLabelActive: {
     color: Colors.white,
-    fontWeight: "700",
+    fontFamily: "Poppins_700Bold",
   },
   filterChipPressed: Pressed.default,
 
@@ -394,6 +406,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    paddingHorizontal: 2,
   },
   groupHeaderLeft: {
     flexDirection: "row",
@@ -401,28 +414,30 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   groupDateDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
     backgroundColor: Colors.primary,
   },
   groupDateLabel: {
     ...Typography.label,
     color: Colors.textSecondary,
-    letterSpacing: 0.5,
+    letterSpacing: 0.8,
     textTransform: "uppercase",
-    fontWeight: "700",
+    fontFamily: "Poppins_700Bold",
   },
   groupTotalBadge: {
     backgroundColor: Colors.primarySoft,
-    borderRadius: Radius.sm,
+    borderRadius: Radius.xl,
     paddingHorizontal: Spacing.sm,
-    paddingVertical: 2,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: "#CDEFE1",
   },
   groupTotal: {
     ...Typography.caption,
     color: Colors.primary,
-    fontWeight: "700",
+    fontFamily: "Poppins_700Bold",
   },
   groupCard: {
     padding: 0,
@@ -434,12 +449,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: Spacing.md,
-    paddingVertical: Spacing.md,
+    paddingVertical: Spacing.md + 2,
     paddingHorizontal: Spacing.base,
   },
-  expenseRowPressed: Pressed.default,
+  expenseRowPressed: {
+    backgroundColor: Colors.background,
+  },
   expenseIcon: {
-    fontSize: 20,
+    fontSize: 22,
+    fontFamily: "Poppins_400Regular",
   },
   expenseInfo: {
     flex: 1,
@@ -448,6 +466,7 @@ const styles = StyleSheet.create({
   expenseCategory: {
     ...Typography.bodyMedium,
     color: Colors.textPrimary,
+    fontFamily: "Poppins_600SemiBold",
   },
   expenseMeta: {
     flexDirection: "row",
@@ -468,12 +487,12 @@ const styles = StyleSheet.create({
   expenseRight: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 2,
+    gap: 4,
   },
   expenseAmount: {
     ...Typography.bodySmall,
-    color: Colors.textPrimary,
-    fontWeight: "700",
+    color: Colors.accent.rose,
+    fontFamily: "Poppins_700Bold",
   },
   divider: {
     height: 1,

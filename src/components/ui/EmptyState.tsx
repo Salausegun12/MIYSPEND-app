@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, ViewStyle } from "react-native";
 import { Colors } from "../../constants/colors";
 import { Typography } from "../../constants/typography";
 import { Spacing } from "../../constants/spacing";
+import { Radius } from "../../constants/radius";
+import { Shadows } from "../../constants/shadows";
 
 interface EmptyStateProps {
   title: string;
@@ -27,25 +29,30 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingVertical: Spacing.xxxl,
     paddingHorizontal: Spacing.xl,
+    gap: Spacing.sm,
   },
   icon: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
+    width: 96,
+    height: 96,
+    borderRadius: 48,
     backgroundColor: Colors.primarySoft,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: Spacing.base,
+    marginBottom: Spacing.sm,
+    borderWidth: 1,
+    borderColor: "#CDEFE1",
+    ...Shadows.sm,
   },
   title: {
     ...Typography.h3,
     color: Colors.textPrimary,
     textAlign: "center",
-    marginBottom: Spacing.sm,
+    letterSpacing: -0.2,
   },
   message: {
     ...Typography.bodySmall,
     color: Colors.textSecondary,
     textAlign: "center",
+    maxWidth: 260,
   },
 });

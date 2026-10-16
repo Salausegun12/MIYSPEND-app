@@ -15,7 +15,7 @@ interface AnimatedEntryProps {
 
 export function AnimatedEntry({ children, delay = 0, style }: AnimatedEntryProps) {
   const opacity = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(12)).current;
+  const translateY = useRef(new Animated.Value(20)).current;
   const [reduceMotion, setReduceMotion] = useState(false);
 
   useEffect(() => {
@@ -48,16 +48,16 @@ export function AnimatedEntry({ children, delay = 0, style }: AnimatedEntryProps
     const animation = Animated.parallel([
       Animated.timing(opacity, {
         toValue: 1,
-        duration: 420,
+        duration: 480,
         delay,
-        easing: Easing.out(Easing.cubic),
+        easing: Easing.out(Easing.exp),
         useNativeDriver: true,
       }),
       Animated.timing(translateY, {
         toValue: 0,
-        duration: 420,
+        duration: 480,
         delay,
-        easing: Easing.out(Easing.cubic),
+        easing: Easing.out(Easing.exp),
         useNativeDriver: true,
       }),
     ]);

@@ -14,7 +14,8 @@
     },
     "android": {
       "package": "com.miyspend.app",
-      "versionCode": 5,
+      "versionCode": 17,
+      "allowBackup": false,
       "adaptiveIcon": {
         "backgroundColor": "#004D40",
         "foregroundImage": "./logo.png",
@@ -37,14 +38,13 @@
         "expo-image-picker",
         {
           "photosPermission": "Allow MiySpend to access your photos so you can attach a receipt to an expense.",
-          "cameraPermission": "Allow MiySpend to use your camera so you can snap a receipt for an expense.",
-          "microphonePermission": false
+          "cameraPermission": "Allow MiySpend to use your camera so you can snap a receipt for an expense."
         }
       ],
       [
         "expo-notifications",
         {
-          "icon": "./assets/icon.png",
+          "icon": "./logo.png",
           "color": "#006B5B"
         }
       ],
@@ -60,7 +60,14 @@
         }
       ],
       "expo-sharing",
-      "expo-sqlite"
+      "expo-sqlite",
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Allow MiySpend to listen so you can record expenses, income, budgets and savings goals by voice.",
+          "speechRecognitionPermission": "Allow MiySpend to recognise your speech so your commands can be recorded."
+        }
+      ]
     ],
     "extra": {
       "router": {},

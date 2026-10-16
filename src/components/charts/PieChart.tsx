@@ -188,7 +188,7 @@ const styles = StyleSheet.create({
   },
   centerValue: {
     color: Colors.textPrimary,
-    fontWeight: "700",
+    fontFamily: "Poppins_700Bold",
     letterSpacing: -0.3,
   },
   centerLabel: {
@@ -217,17 +217,17 @@ const styles = StyleSheet.create({
   legendName: {
     ...Typography.bodyMedium,
     color: Colors.textPrimary,
-    fontWeight: "600",
+    fontFamily: "Poppins_600SemiBold",
   },
   legendPct: {
     ...Typography.caption,
     color: Colors.textSecondary,
-    fontWeight: "600",
+    fontFamily: "Poppins_600SemiBold",
   },
   legendAmount: {
     ...Typography.bodyMedium,
     color: Colors.textPrimary,
-    fontWeight: "700",
+    fontFamily: "Poppins_700Bold",
     textAlign: "right",
   },
   legendSwatch: {

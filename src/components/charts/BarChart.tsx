@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
   readoutLabel: {
     ...Typography.caption,
     color: Colors.textSecondary,
-    fontWeight: "700",
+    fontFamily: "Poppins_700Bold",
     textTransform: "uppercase",
     letterSpacing: 0.4,
     flexShrink: 1,
@@ -202,11 +202,11 @@ const styles = StyleSheet.create({
   readoutValue: {
     ...Typography.bodyMedium,
     color: Colors.textPrimary,
-    fontWeight: "700",
+    fontFamily: "Poppins_700Bold",
   },
   readoutValueZero: {
     color: Colors.textTertiary,
-    fontWeight: "600",
+    fontFamily: "Poppins_600SemiBold",
   },
   plot: {
     flexDirection: "row",
@@ -233,7 +233,7 @@ const styles = StyleSheet.create({
   dayLabel: {
     ...Typography.caption,
     color: Colors.textSecondary,
-    fontWeight: "600",
+    fontFamily: "Poppins_600SemiBold",
   },
   dayLabelCompact: {
     fontSize: 10,
@@ -241,12 +241,12 @@ const styles = StyleSheet.create({
   },
   dayLabelActive: {
     color: Colors.primary,
-    fontWeight: "700",
+    fontFamily: "Poppins_700Bold",
   },
   dateLabel: {
     fontSize: 10,
     lineHeight: 12,
     color: Colors.textTertiary,
-    fontWeight: "500",
+    fontFamily: "Poppins_500Medium",
   },
 });

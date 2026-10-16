@@ -75,14 +75,15 @@ export type VoiceRecognizerEvent =
   | { type: "end" };
 
 /**
- * The speech-to-text contract the app depends on. A recognizer may be backed
- * by an on-device engine, but it must never send audio off the device. Only
- * the resulting transcript ever reaches the parser.
+ * The speech-to-text contract the app depends on. Only the resulting transcript
+ * ever reaches the parser. A recognizer that runs entirely on the device reports
+ * `offline: true`; one that delegates to the platform's speech service (which
+ * may use the network) reports `offline: false`.
  */
 export interface VoiceRecognizer {
   readonly id: string;
   readonly label: string;
-  /** True when recognition runs entirely on the device. */
+  /** True when recognition runs entirely on the device (no network use). */
   readonly offline: boolean;
   isAvailable(): Promise<boolean>;
   start(): Promise<void>;

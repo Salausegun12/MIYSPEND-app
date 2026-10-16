@@ -351,7 +351,7 @@ const styles = StyleSheet.create({
   },
   filterLabelActive: {
     color: Colors.surface,
-    fontWeight: "600",
+    fontFamily: "Poppins_600SemiBold",
   },
   filterChipPressed: Pressed.default,
   scrollContent: {
@@ -376,7 +376,7 @@ const styles = StyleSheet.create({
   groupTotal: {
     ...Typography.bodySmall,
     color: Colors.success,
-    fontWeight: "600",
+    fontFamily: "Poppins_600SemiBold",
   },
   groupCard: {
     padding: Spacing.sm,
@@ -395,7 +395,7 @@ const styles = StyleSheet.create({
   incomeSource: {
     ...Typography.bodyMedium,
     color: Colors.textPrimary,
-    fontWeight: "600",
+    fontFamily: "Poppins_600SemiBold",
   },
   incomeNote: {
     ...Typography.caption,
@@ -420,7 +420,7 @@ const styles = StyleSheet.create({
   incomeAmount: {
     ...Typography.bodyMedium,
     color: Colors.success,
-    fontWeight: "600",
+    fontFamily: "Poppins_600SemiBold",
   },
   divider: {
     height: 1,

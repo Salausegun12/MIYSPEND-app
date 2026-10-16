@@ -98,19 +98,21 @@ function SettingRow({ icon, iconColor = Colors.primary, title, desc, right, onPr
 
 const rowStyles = StyleSheet.create({
   row: {
-    paddingVertical: Spacing.md,
+    paddingVertical: Spacing.md + 2,
     paddingHorizontal: Spacing.base,
   },
-  rowPressed: Pressed.default,
+  rowPressed: {
+    backgroundColor: Colors.background,
+  },
   inner: {
     flexDirection: "row",
     alignItems: "center",
     gap: Spacing.md,
   },
   iconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: Radius.md,
+    width: 42,
+    height: 42,
+    borderRadius: Radius.md + 2,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -121,7 +123,7 @@ const rowStyles = StyleSheet.create({
   title: {
     ...Typography.bodyMedium,
     color: Colors.textPrimary,
-    fontWeight: "600",
+    fontFamily: "Poppins_600SemiBold",
   },
   desc: {
     ...Typography.caption,
@@ -316,7 +318,7 @@ export default function SettingsScreen() {
                       <Ionicons name="warning-outline" size={16} color={Colors.warning} />
                     </View>
                     <Text style={styles.warningText}>
-                      Daily reminders aren't available in Expo Go on Android. Install a development build.
+                      Daily reminders aren&apos;t available in Expo Go on Android. Install a development build.
                     </Text>
                   </View>
                 </>
@@ -419,6 +421,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     ...Typography.h1,
     color: Colors.textPrimary,
+    letterSpacing: -0.5,
   },
   content: {
     paddingHorizontal: Spacing.base,
@@ -483,7 +486,7 @@ const styles = StyleSheet.create({
   brandBadgeText: {
     ...Typography.caption,
     color: "rgba(255,255,255,0.85)",
-    fontWeight: "600",
+    fontFamily: "Poppins_600SemiBold",
   },
 
   // Sections
@@ -492,10 +495,11 @@ const styles = StyleSheet.create({
   },
   sectionLabel: {
     ...Typography.label,
-    color: Colors.textSecondary,
-    letterSpacing: 0.5,
+    color: Colors.textTertiary,
+    letterSpacing: 1,
     textTransform: "uppercase",
     paddingHorizontal: Spacing.xs,
+    fontFamily: "Poppins_700Bold",
   },
   card: {
     padding: 0,

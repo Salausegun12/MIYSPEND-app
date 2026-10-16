@@ -103,8 +103,8 @@ export function Button({
 
 const styles = StyleSheet.create({
   base: {
-    height: 52,
-    borderRadius: Radius.lg,
+    height: 54,
+    borderRadius: Radius.lg + 2,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: Spacing.xl,
@@ -116,7 +116,7 @@ const styles = StyleSheet.create({
     right: 0,
     top: 0,
     bottom: 0,
-    borderRadius: Radius.lg,
+    borderRadius: Radius.lg + 2,
   },
   primary: {
     backgroundColor: Colors.primary,
@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
   },
   secondary: {
     backgroundColor: Colors.primarySoft,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: Colors.primary,
   },
   secondaryPressed: {
@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.92,
-    transform: [{ scale: 0.98 }],
+    transform: [{ scale: 0.97 }],
   },
   disabled: {
     backgroundColor: Colors.disabledBackground,
@@ -150,6 +150,7 @@ const styles = StyleSheet.create({
   text: {
     ...Typography.button,
     color: Colors.surface,
+    letterSpacing: 0.3,
   },
   textSecondary: {
     color: Colors.primary,

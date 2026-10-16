@@ -504,7 +504,7 @@ const styles = StyleSheet.create({
   },
   chipLabelActive: {
     color: Colors.primary,
-    fontWeight: "600",
+    fontFamily: "Poppins_600SemiBold",
   },
   row: {
     flexDirection: "row",

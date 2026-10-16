@@ -166,7 +166,7 @@ const styles = StyleSheet.create({
     ...Typography.caption,
     color: Colors.textPrimary,
     marginTop: Spacing.xs,
-    fontWeight: "500",
+    fontFamily: "Poppins_500Medium",
   },
   colorValue: {
     ...Typography.caption,
@@ -231,6 +231,6 @@ const styles = StyleSheet.create({
   iconText: {
     ...Typography.bodyMedium,
     color: Colors.primary,
-    fontWeight: "600",
+    fontFamily: "Poppins_600SemiBold",
   },
 });

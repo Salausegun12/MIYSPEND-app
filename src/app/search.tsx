@@ -415,7 +415,7 @@ export default function SearchScreen() {
                     <Text
                       style={[
                         styles.chipLabel,
-                        active && { color: cat.color, fontWeight: "600" },
+                        active && { color: cat.color, fontFamily: "Poppins_600SemiBold" },
                       ]}
                     >
                       {cat.name}
@@ -679,7 +679,7 @@ const styles = StyleSheet.create({
   clearText: {
     ...Typography.bodySmall,
     color: Colors.primary,
-    fontWeight: "600",
+    fontFamily: "Poppins_600SemiBold",
   },
   searchContainer: {
     paddingHorizontal: Spacing.base,
@@ -723,6 +723,7 @@ const styles = StyleSheet.create({
   chipPressed: Pressed.default,
   chipIcon: {
     fontSize: 16,
+    fontFamily: "Poppins_400Regular",
   },
   chipLabel: {
     ...Typography.bodySmall,
@@ -730,7 +731,7 @@ const styles = StyleSheet.create({
   },
   chipLabelActive: {
     color: Colors.primary,
-    fontWeight: "600",
+    fontFamily: "Poppins_600SemiBold",
   },
   typeChip: {
     alignItems: "center",
@@ -811,6 +812,7 @@ const styles = StyleSheet.create({
   resultRowPressed: Pressed.default,
   expenseIcon: {
     fontSize: 18,
+    fontFamily: "Poppins_400Regular",
   },
   resultInfo: {
     flex: 1,
@@ -827,7 +829,7 @@ const styles = StyleSheet.create({
   resultAmount: {
     ...Typography.bodyMedium,
     color: Colors.textPrimary,
-    fontWeight: "600",
+    fontFamily: "Poppins_600SemiBold",
   },
   incomeAmount: {
     color: Colors.success,

@@ -1,81 +1,74 @@
 import { TextStyle } from "react-native";
 
-const fontFamily = "System";
+const Poppins = {
+  regular: "Poppins_400Regular",
+  medium: "Poppins_500Medium",
+  semiBold: "Poppins_600SemiBold",
+  bold: "Poppins_700Bold",
+};
 
 export const Typography: Record<string, TextStyle> = {
   display: {
-    fontFamily,
+    fontFamily: Poppins.bold,
     fontSize: 36,
-    fontWeight: "700",
     lineHeight: 44,
     letterSpacing: -0.5,
   },
   h1: {
-    fontFamily,
+    fontFamily: Poppins.bold,
     fontSize: 28,
-    fontWeight: "700",
     lineHeight: 36,
     letterSpacing: -0.3,
   },
   h2: {
-    fontFamily,
+    fontFamily: Poppins.semiBold,
     fontSize: 22,
-    fontWeight: "600",
     lineHeight: 28,
   },
   h3: {
-    fontFamily,
+    fontFamily: Poppins.semiBold,
     fontSize: 18,
-    fontWeight: "600",
     lineHeight: 24,
   },
   body: {
-    fontFamily,
+    fontFamily: Poppins.regular,
     fontSize: 16,
-    fontWeight: "400",
     lineHeight: 24,
   },
   bodyMedium: {
-    fontFamily,
+    fontFamily: Poppins.medium,
     fontSize: 16,
-    fontWeight: "500",
     lineHeight: 24,
   },
   bodySmall: {
-    fontFamily,
+    fontFamily: Poppins.regular,
     fontSize: 14,
-    fontWeight: "400",
     lineHeight: 20,
   },
   caption: {
-    fontFamily,
+    fontFamily: Poppins.regular,
     fontSize: 12,
-    fontWeight: "400",
     lineHeight: 16,
   },
   label: {
-    fontFamily,
+    fontFamily: Poppins.medium,
     fontSize: 14,
-    fontWeight: "500",
     lineHeight: 20,
   },
   button: {
-    fontFamily,
+    fontFamily: Poppins.semiBold,
     fontSize: 16,
-    fontWeight: "600",
     lineHeight: 24,
   },
   amount: {
-    fontFamily,
+    fontFamily: Poppins.bold,
     fontSize: 32,
-    fontWeight: "700",
     lineHeight: 40,
     letterSpacing: -0.5,
   },
   amountSmall: {
-    fontFamily,
+    fontFamily: Poppins.semiBold,
     fontSize: 20,
-    fontWeight: "600",
     lineHeight: 28,
   },
 };

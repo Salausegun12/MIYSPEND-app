@@ -1116,6 +1116,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     ...Typography.h1,
     color: Colors.textPrimary,
+    letterSpacing: -0.5,
   },
   loadingContainer: {
     flex: 1,
@@ -1128,6 +1129,9 @@ const styles = StyleSheet.create({
     gap: Spacing.lg,
   },
   downloadSection: {
+    gap: Spacing.md,
+  },
+  gallerySection: {
     gap: Spacing.md,
   },
   downloadHeader: {
@@ -1171,14 +1175,19 @@ const styles = StyleSheet.create({
     gap: 2,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: Radius.lg,
+    borderWidth: 1.5,
+    borderColor: Colors.borderLight,
+    borderRadius: Radius.lg + 2,
     backgroundColor: Colors.surface,
   },
   periodChipSelected: {
     borderColor: Colors.primary,
     backgroundColor: Colors.primarySoft,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 2,
   },
   periodChipPressed: Pressed.default,
   periodChipLabel: {
@@ -1188,7 +1197,7 @@ const styles = StyleSheet.create({
   },
   periodChipLabelSelected: {
     color: Colors.primary,
-    fontWeight: "600",
+    fontFamily: "Poppins_600SemiBold",
   },
   periodChipStatus: {
     ...Typography.caption,
@@ -1354,7 +1363,7 @@ const styles = StyleSheet.create({
   weekRange: {
     ...Typography.bodyMedium,
     color: Colors.primary,
-    fontWeight: "700",
+    fontFamily: "Poppins_700Bold",
   },
   summaryRow: {
     flexDirection: "row",
@@ -1374,7 +1383,7 @@ const styles = StyleSheet.create({
     ...Typography.caption,
     color: "rgba(255,255,255,0.78)",
     marginBottom: Spacing.xs,
-    fontWeight: "700",
+    fontFamily: "Poppins_700Bold",
     textTransform: "uppercase",
     letterSpacing: 0.3,
   },
@@ -1393,7 +1402,7 @@ const styles = StyleSheet.create({
     ...Typography.caption,
     color: Colors.accent.sky,
     marginBottom: Spacing.xs,
-    fontWeight: "700",
+    fontFamily: "Poppins_700Bold",
     textTransform: "uppercase",
     letterSpacing: 0.3,
   },
@@ -1409,7 +1418,7 @@ const styles = StyleSheet.create({
     ...Typography.caption,
     color: Colors.accent.coral,
     marginBottom: Spacing.xs,
-    fontWeight: "700",
+    fontFamily: "Poppins_700Bold",
     textTransform: "uppercase",
     letterSpacing: 0.3,
   },
@@ -1425,7 +1434,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 22,
     color: Colors.textPrimary,
-    fontWeight: "700",
+    fontFamily: "Poppins_700Bold",
   },
   chartCard: {
     padding: Spacing.md,
@@ -1445,6 +1454,7 @@ const styles = StyleSheet.create({
   },
   catIcon: {
     fontSize: 18,
+    fontFamily: "Poppins_400Regular",
   },
   catInfo: {
     flex: 1,
@@ -1458,12 +1468,12 @@ const styles = StyleSheet.create({
   catName: {
     ...Typography.bodyMedium,
     color: Colors.textPrimary,
-    fontWeight: "600",
+    fontFamily: "Poppins_600SemiBold",
   },
   catPct: {
     ...Typography.caption,
     color: Colors.textSecondary,
-    fontWeight: "600",
+    fontFamily: "Poppins_600SemiBold",
   },
   catBarBg: {
     height: 8,
@@ -1478,7 +1488,7 @@ const styles = StyleSheet.create({
   catAmount: {
     ...Typography.bodySmall,
     color: Colors.textPrimary,
-    fontWeight: "700",
+    fontFamily: "Poppins_700Bold",
     minWidth: 72,
     textAlign: "right",
   },

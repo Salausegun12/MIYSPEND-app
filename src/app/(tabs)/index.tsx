@@ -48,7 +48,7 @@ import {
 import { getUserName } from "../../utils/user";
 import type { ExpenseWithCategory, Income, IncomeSource } from "../../types/database";
 
-const HERO_GRADIENT = ["#00937D", "#00554A"] as const;
+const HERO_GRADIENT = ["#00A88C", "#005A4C"] as const;
 
 interface PeriodRowProps {
   label: string;
@@ -211,42 +211,55 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* ── Header ── */}
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.greeting}>{getGreeting()}{userName ? `, ${userName}` : ""} 👋</Text>
-            <Text style={styles.brand}>MiySpend</Text>
+        <AnimatedEntry delay={0}>
+          <View style={styles.header}>
+            <View>
+              <Text style={styles.greeting}>{getGreeting()}{userName ? `, ${userName}` : ""} 👋</Text>
+              <Text style={styles.brand}>MiySpend</Text>
+            </View>
+            <Pressable
+              onPress={() => router.push("/search" as Href)}
+              style={({ pressed }) => [styles.searchBtn, pressed && styles.searchBtnPressed]}
+              accessibilityRole="button"
+              accessibilityLabel="Search transactions"
+            >
+              <Ionicons name="search-outline" size={20} color={Colors.primary} />
+            </Pressable>
           </View>
-          <Pressable
-            onPress={() => router.push("/search" as Href)}
-            style={({ pressed }) => [styles.searchBtn, pressed && styles.searchBtnPressed]}
-            accessibilityRole="button"
-            accessibilityLabel="Search transactions"
-          >
-            <Ionicons name="search-outline" size={20} color={Colors.primary} />
-          </Pressable>
-        </View>
+        </AnimatedEntry>
 
         {/* ── Hero balance card ── */}
-        <AnimatedEntry delay={30}>
+        <AnimatedEntry delay={60}>
           <LinearGradient
             colors={HERO_GRADIENT}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.heroCard}
           >
-            <Text style={styles.heroLabel}>This month's net</Text>
+            {/* Decorative orbs */}
+            <View style={styles.heroOrb1} />
+            <View style={styles.heroOrb2} />
+            <View style={styles.heroOrb3} />
+
+            <Text style={styles.heroLabel}>This month&apos;s net</Text>
             <Text style={[styles.heroAmount, monthNet < 0 && styles.heroAmountNeg]}>
               {formatSignedKoboAmount(monthNet)}
             </Text>
 
             <View style={styles.heroStats}>
               <View style={styles.heroStat}>
-                <Text style={styles.heroStatLabel}>Income</Text>
+                <View style={styles.heroStatIconRow}>
+                  <View style={styles.heroStatDot} />
+                  <Text style={styles.heroStatLabel}>Income</Text>
+                </View>
                 <Text style={styles.heroStatValue}>{formatKoboAmount(monthIncome)}</Text>
               </View>
               <View style={styles.heroStatDivider} />
               <View style={styles.heroStat}>
-                <Text style={styles.heroStatLabel}>Expenses</Text>
+                <View style={styles.heroStatIconRow}>
+                  <View style={[styles.heroStatDot, styles.heroStatDotRed]} />
+                  <Text style={styles.heroStatLabel}>Expenses</Text>
+                </View>
                 <Text style={styles.heroStatValue}>{formatKoboAmount(monthExpense)}</Text>
               </View>
             </View>
@@ -254,7 +267,7 @@ export default function HomeScreen() {
         </AnimatedEntry>
 
         {/* ── Quick actions ── */}
-        <AnimatedEntry delay={60}>
+        <AnimatedEntry delay={100}>
           <View style={styles.quickActions}>
             <Pressable
               onPress={() => router.push("/add-expense" as Href)}
@@ -268,7 +281,9 @@ export default function HomeScreen() {
                 end={{ x: 1, y: 1 }}
                 style={styles.quickBtnFill}
               >
-                <Ionicons name="remove-circle-outline" size={20} color={Colors.white} />
+                <View style={styles.quickBtnIconWrap}>
+                  <Ionicons name="remove-circle-outline" size={20} color={Colors.white} />
+                </View>
                 <Text style={styles.quickBtnText} numberOfLines={1}>Add Expense</Text>
               </LinearGradient>
             </Pressable>
@@ -279,35 +294,20 @@ export default function HomeScreen() {
               accessibilityLabel="Add income"
             >
               <View style={styles.quickBtnFill}>
-                <Ionicons name="add-circle-outline" size={20} color={Colors.primary} />
+                <View style={[styles.quickBtnIconWrap, styles.quickBtnIconWrapSoft]}>
+                  <Ionicons name="add-circle-outline" size={20} color={Colors.primary} />
+                </View>
                 <Text style={[styles.quickBtnText, styles.quickBtnTextSoft]} numberOfLines={1}>Add Income</Text>
               </View>
             </Pressable>
           </View>
         </AnimatedEntry>
 
-        {/* ── Voice entry ── */}
-        <AnimatedEntry delay={70}>
-          <Pressable
-            onPress={() => router.push("/voice-entry" as unknown as Href)}
-            style={({ pressed }) => [styles.voiceBtn, pressed && Pressed.default]}
-            accessibilityRole="button"
-            accessibilityLabel="Record a transaction, budget or savings goal by voice"
-          >
-            <View style={styles.voiceIconWrap}>
-              <Ionicons name="mic" size={18} color={Colors.white} />
-            </View>
-            <View style={styles.voiceTextWrap}>
-              <Text style={styles.voiceTitle}>Speak to record</Text>
-              <Text style={styles.voiceSubtitle}>Record transactions, budgets or savings goals by voice</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color={Colors.primary} />
-          </Pressable>
-        </AnimatedEntry>
-
         {/* ── Period summary ── */}
-        <AnimatedEntry delay={80}>
-          <Text style={styles.sectionTitle}>Period summary</Text>
+        <AnimatedEntry delay={130}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Period summary</Text>
+          </View>
           <Card style={styles.periodCard}>
             <PeriodRow label="Today" income={todayIncome} expense={todayExpense}>
               <PieChart
@@ -357,7 +357,7 @@ export default function HomeScreen() {
 
         {/* ── Recent expenses ── */}
         {hasExpenses && (
-          <AnimatedEntry delay={100}>
+          <AnimatedEntry delay={160}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Recent expenses</Text>
               <Pressable
@@ -380,7 +380,7 @@ export default function HomeScreen() {
                     accessibilityRole="button"
                     accessibilityLabel={`View ${expense.description} expense`}
                   >
-                    <IconContainer size={44} backgroundColor={expense.category_color + "1F"}>
+                    <IconContainer size={46} backgroundColor={expense.category_color + "22"}>
                       <Text style={styles.txIcon}>{expense.category_icon}</Text>
                     </IconContainer>
                     <View style={styles.txInfo}>
@@ -400,7 +400,7 @@ export default function HomeScreen() {
 
         {/* ── Recent income ── */}
         {hasIncome && (
-          <AnimatedEntry delay={120}>
+          <AnimatedEntry delay={190}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Recent income</Text>
               <Pressable
@@ -426,7 +426,7 @@ export default function HomeScreen() {
                       accessibilityRole="button"
                       accessibilityLabel={`View ${source} income of ${formatKoboAmount(income.amount)}`}
                     >
-                      <IconContainer size={44} backgroundColor={color + "1F"}>
+                      <IconContainer size={46} backgroundColor={color + "22"}>
                         <Ionicons
                           name={INCOME_SOURCE_ICONS[source] ?? "wallet-outline"}
                           size={20}
@@ -455,7 +455,7 @@ export default function HomeScreen() {
 
         {/* ── Empty state ── */}
         {!hasExpenses && !hasIncome && (
-          <AnimatedEntry delay={100}>
+          <AnimatedEntry delay={160}>
             <Card style={styles.emptyCard}>
               <View style={styles.emptyIconWrap}>
                 <LinearGradient
@@ -476,7 +476,7 @@ export default function HomeScreen() {
         )}
 
         {/* ── Income history link ── */}
-        <AnimatedEntry delay={140}>
+        <AnimatedEntry delay={220}>
           <Pressable
             onPress={() => router.push("/income-history" as Href)}
             style={({ pressed }) => [styles.incomeHistoryLink, pressed && styles.seeAllPressed]}
@@ -489,6 +489,26 @@ export default function HomeScreen() {
           </Pressable>
         </AnimatedEntry>
       </ScrollView>
+
+      {/* ── Floating voice assistant ── */}
+      <Pressable
+        onPress={() => router.push("/voice-entry" as unknown as Href)}
+        style={({ pressed }) => [
+          styles.voiceFab,
+          pressed && styles.voiceFabPressed,
+        ]}
+        accessibilityRole="button"
+        accessibilityLabel="Voice assistant"
+      >
+        <LinearGradient
+          colors={Colors.gradient.primary}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.voiceFabFill}
+        >
+          <Ionicons name="mic" size={26} color={Colors.white} />
+        </LinearGradient>
+      </Pressable>
     </SafeAreaView>
   );
 }
@@ -503,7 +523,7 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: Spacing.base,
-    paddingBottom: Spacing.xxxl,
+    paddingBottom: 124,
     gap: Spacing.base,
   },
   loadingContainer: {
@@ -514,7 +534,7 @@ const styles = StyleSheet.create({
 
   // Header
   header: {
-    paddingTop: Spacing.base,
+    paddingTop: Spacing.md,
     paddingBottom: Spacing.xs,
     flexDirection: "row",
     alignItems: "center",
@@ -528,36 +548,69 @@ const styles = StyleSheet.create({
   brand: {
     ...Typography.h1,
     color: Colors.primary,
+    letterSpacing: -0.5,
   },
   searchBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     backgroundColor: Colors.primarySoft,
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#CDEFE1",
+    ...Shadows.sm,
   },
   searchBtnPressed: Pressed.default,
 
   // Hero card
   heroCard: {
-    borderRadius: Radius.xxl,
+    borderRadius: Radius.xxl + 4,
     padding: Spacing.xl,
     gap: Spacing.xs,
+    overflow: "hidden",
     ...Shadows.lg,
+  },
+  heroOrb1: {
+    position: "absolute",
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    backgroundColor: "rgba(255,255,255,0.07)",
+    top: -50,
+    right: -40,
+  },
+  heroOrb2: {
+    position: "absolute",
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: "rgba(255,255,255,0.05)",
+    bottom: -20,
+    left: 20,
+  },
+  heroOrb3: {
+    position: "absolute",
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    top: 20,
+    left: -10,
   },
   heroLabel: {
     ...Typography.caption,
-    color: "rgba(255,255,255,0.7)",
-    letterSpacing: 0.5,
+    color: "rgba(255,255,255,0.72)",
+    letterSpacing: 1,
     textTransform: "uppercase",
+    fontFamily: "Poppins_600SemiBold",
   },
   heroAmount: {
-    fontSize: 36,
-    fontWeight: "700",
+    fontSize: 38,
+    fontFamily: "Poppins_700Bold",
     color: Colors.white,
     letterSpacing: -0.5,
-    marginTop: 2,
+    marginTop: 4,
   },
   heroAmountNeg: {
     color: "#FFB4B4",
@@ -568,25 +621,40 @@ const styles = StyleSheet.create({
     marginTop: Spacing.lg,
     paddingTop: Spacing.md,
     borderTopWidth: 1,
-    borderTopColor: "rgba(255,255,255,0.18)",
+    borderTopColor: "rgba(255,255,255,0.15)",
   },
   heroStat: {
     flex: 1,
-    gap: 2,
+    gap: 4,
+  },
+  heroStatIconRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  heroStatDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#34D399",
+  },
+  heroStatDotRed: {
+    backgroundColor: "#FB7185",
   },
   heroStatLabel: {
     ...Typography.caption,
     color: "rgba(255,255,255,0.65)",
+    fontFamily: "Poppins_500Medium",
   },
   heroStatValue: {
     ...Typography.bodyMedium,
     color: Colors.white,
-    fontWeight: "600",
+    fontFamily: "Poppins_700Bold",
   },
   heroStatDivider: {
     width: 1,
-    height: 28,
-    backgroundColor: "rgba(255,255,255,0.2)",
+    height: 36,
+    backgroundColor: "rgba(255,255,255,0.18)",
     marginHorizontal: Spacing.lg,
   },
 
@@ -597,8 +665,8 @@ const styles = StyleSheet.create({
   },
   quickBtn: {
     flex: 1,
-    height: 56,
-    borderRadius: Radius.lg,
+    height: 58,
+    borderRadius: Radius.lg + 2,
     overflow: "hidden",
     ...Shadows.sm,
   },
@@ -607,58 +675,53 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
+    gap: 8,
     paddingHorizontal: Spacing.sm,
+  },
+  quickBtnIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  quickBtnIconWrapSoft: {
+    backgroundColor: Colors.primarySoft,
   },
   quickBtnPressed: Pressed.default,
   quickBtnSoft: {
     backgroundColor: Colors.primarySoft,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: "#CDEFE1",
   },
   quickBtnText: {
     fontSize: 14,
-    fontWeight: "700",
+    fontFamily: "Poppins_700Bold",
     color: Colors.white,
     flexShrink: 1,
+    letterSpacing: 0.2,
   },
   quickBtnTextSoft: {
     color: Colors.primary,
   },
 
-  // Voice entry
-  voiceBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.md,
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: "#CDEFE1",
-    borderRadius: Radius.lg,
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.base,
-    ...Shadows.sm,
+  // Floating voice assistant
+  voiceFab: {
+    position: "absolute",
+    right: Spacing.base,
+    bottom: Spacing.base,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    overflow: "hidden",
+    ...Shadows.lg,
   },
-  voiceIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.primary,
+  voiceFabPressed: Pressed.default,
+  voiceFabFill: {
+    flex: 1,
     alignItems: "center",
     justifyContent: "center",
-  },
-  voiceTextWrap: {
-    flex: 1,
-  },
-  voiceTitle: {
-    ...Typography.bodyMedium,
-    color: Colors.textPrimary,
-    fontFamily: "Poppins_600SemiBold",
-  },
-  voiceSubtitle: {
-    ...Typography.caption,
-    color: Colors.textSecondary,
-    marginTop: 1,
   },
 
   // Section
@@ -666,11 +729,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: Spacing.xs,
+    marginBottom: 2,
   },
   sectionTitle: {
     ...Typography.h3,
     color: Colors.textPrimary,
+    letterSpacing: -0.2,
   },
   seeAll: {
     flexDirection: "row",
@@ -678,11 +742,14 @@ const styles = StyleSheet.create({
     gap: 2,
     paddingVertical: Spacing.xs,
     paddingHorizontal: Spacing.xs,
+    backgroundColor: Colors.primarySoft,
+    borderRadius: Radius.xl,
+    paddingLeft: Spacing.sm,
   },
   seeAllText: {
     ...Typography.caption,
     color: Colors.primary,
-    fontWeight: "700",
+    fontFamily: "Poppins_700Bold",
   },
   seeAllPressed: Pressed.default,
 
@@ -696,12 +763,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: Spacing.md,
-    paddingVertical: Spacing.md,
+    paddingVertical: Spacing.md + 2,
     paddingHorizontal: Spacing.base,
   },
   periodRowLeft: {
     flex: 1,
-    gap: 3,
+    gap: 4,
   },
   periodRowHeader: {
     flexDirection: "row",
@@ -712,6 +779,7 @@ const styles = StyleSheet.create({
   periodRowLabel: {
     ...Typography.label,
     color: Colors.textPrimary,
+    fontFamily: "Poppins_600SemiBold",
   },
   periodRowMeta: {
     ...Typography.caption,
@@ -719,15 +787,15 @@ const styles = StyleSheet.create({
   },
   periodRowIn: {
     color: Colors.success,
-    fontWeight: "600",
+    fontFamily: "Poppins_600SemiBold",
   },
   periodRowOut: {
     color: Colors.accent.rose,
-    fontWeight: "600",
+    fontFamily: "Poppins_600SemiBold",
   },
   periodRowNet: {
     ...Typography.bodyMedium,
-    fontWeight: "700",
+    fontFamily: "Poppins_700Bold",
   },
   periodRowChart: {
     width: 140,
@@ -755,12 +823,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: Spacing.md,
-    paddingVertical: Spacing.md,
+    paddingVertical: Spacing.md + 2,
     paddingHorizontal: Spacing.base,
   },
-  txRowPressed: Pressed.default,
+  txRowPressed: {
+    backgroundColor: Colors.background,
+  },
   txIcon: {
-    fontSize: 20,
+    fontSize: 22,
+    fontFamily: "Poppins_400Regular",
   },
   txInfo: {
     flex: 1,
@@ -768,6 +839,7 @@ const styles = StyleSheet.create({
   txName: {
     ...Typography.bodyMedium,
     color: Colors.textPrimary,
+    fontFamily: "Poppins_600SemiBold",
   },
   txDesc: {
     ...Typography.caption,
@@ -777,12 +849,12 @@ const styles = StyleSheet.create({
   txRight: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 2,
+    gap: 4,
   },
   txAmount: {
     ...Typography.bodySmall,
     color: Colors.textPrimary,
-    fontWeight: "700",
+    fontFamily: "Poppins_700Bold",
   },
   incomeAmountText: {
     color: Colors.success,
@@ -803,9 +875,9 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xs,
   },
   emptyIconGradient: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     alignItems: "center",
     justifyContent: "center",
     ...Shadows.md,

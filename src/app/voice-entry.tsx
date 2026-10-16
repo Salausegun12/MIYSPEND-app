@@ -68,6 +68,7 @@ import {
   voiceSpokenSaveConfirmation,
 } from "../services/voice";
 import { useVoicePlayback } from "../services/voice/useVoicePlayback";
+import { registerExpoSpeechRecognizer } from "../services/voice/expoSpeechRecognizer";
 import type {
   BudgetDraft,
   GoalDraft,
@@ -129,6 +130,11 @@ export default function VoiceEntryScreen() {
     [popup]
   );
   const playback = useVoicePlayback({ onUnavailable: handleUnavailable });
+  // Install the on-device microphone recognizer once; the screen then drives
+  // `getVoiceRecognizer()`, which now points at the real speech engine.
+  useState(() => {
+    registerExpoSpeechRecognizer();
+  });
 
   const savingRef = useRef(false);
   const categoriesRef = useRef<Category[]>([]);
@@ -518,9 +524,9 @@ export default function VoiceEntryScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.offlineNote}>
-            <Ionicons name="cloud-offline-outline" size={14} color={Colors.primary} />
+            <Ionicons name="mic-outline" size={14} color={Colors.primary} />
             <Text style={styles.offlineNoteText}>
-              Works offline. Nothing leaves your device.
+              Speak to record income or an expense.
             </Text>
           </View>
 
@@ -763,7 +769,7 @@ export default function VoiceEntryScreen() {
                     <Ionicons name="volume-high-outline" size={22} color={Colors.primary} />
                   </View>
                   <View style={styles.reviewHeaderText}>
-                    <Text style={styles.reviewTitle}>Here's what I found</Text>
+                    <Text style={styles.reviewTitle}>Here&apos;s what I found</Text>
                     <Text style={styles.youSaid} numberOfLines={2}>
                       “{transcript}”
                     </Text>

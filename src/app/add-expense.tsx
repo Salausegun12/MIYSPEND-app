@@ -330,7 +330,7 @@ export default function AddExpenseScreen() {
                     <Text
                       style={[
                         styles.chipLabel,
-                        active && { color: cat.color, fontWeight: "600" },
+                        active && { color: cat.color, fontFamily: "Poppins_600SemiBold" },
                       ]}
                     >
                       {cat.name}
@@ -576,6 +576,7 @@ const styles = StyleSheet.create({
   chipPressed: Pressed.default,
   chipIcon: {
     fontSize: 16,
+    fontFamily: "Poppins_400Regular",
   },
   chipLabel: {
     ...Typography.bodySmall,
@@ -583,7 +584,7 @@ const styles = StyleSheet.create({
   },
   chipLabelActive: {
     color: Colors.primary,
-    fontWeight: "600",
+    fontFamily: "Poppins_600SemiBold",
   },
   row: {
     flexDirection: "row",

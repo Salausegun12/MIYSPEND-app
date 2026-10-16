@@ -303,7 +303,7 @@ export default function BudgetGoalsScreen() {
                 style={styles.summaryHeroCard}
               >
                 <View style={styles.summaryHeroBubble} />
-                <Text style={styles.summaryHeroLabel}>This month's spending</Text>
+                <Text style={styles.summaryHeroLabel}>This month&apos;s spending</Text>
                 <Text style={styles.summaryHeroAmount}>{formatKoboAmount(totalSpent)}</Text>
                 <Text style={styles.summaryHeroSub}>of {formatKoboAmount(totalLimit)} budgeted</Text>
                 {overCount > 0 && (
@@ -416,6 +416,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     ...Typography.h1,
     color: Colors.textPrimary,
+    letterSpacing: -0.5,
   },
   loading: {
     flex: 1,
@@ -434,6 +435,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: Spacing.sm,
+    paddingLeft: 2,
   },
   sectionDot: {
     width: 10,
@@ -443,6 +445,7 @@ const styles = StyleSheet.create({
   sectionLabel: {
     ...Typography.h3,
     color: Colors.textPrimary,
+    letterSpacing: -0.2,
   },
   pressed: Pressed.default,
 
@@ -471,7 +474,7 @@ const styles = StyleSheet.create({
   },
   summaryHeroAmount: {
     fontSize: 30,
-    fontWeight: "700",
+    fontFamily: "Poppins_700Bold",
     color: Colors.white,
     letterSpacing: -0.5,
     marginTop: 2,
@@ -494,7 +497,7 @@ const styles = StyleSheet.create({
   warningBadgeText: {
     ...Typography.caption,
     color: Colors.white,
-    fontWeight: "600",
+    fontFamily: "Poppins_600SemiBold",
   },
 
   // Budget card
@@ -515,6 +518,7 @@ const styles = StyleSheet.create({
   },
   budgetIcon: {
     fontSize: 22,
+    fontFamily: "Poppins_400Regular",
   },
   budgetTitles: {
     flex: 1,
@@ -523,7 +527,7 @@ const styles = StyleSheet.create({
   budgetCategoryName: {
     ...Typography.bodyMedium,
     color: Colors.textPrimary,
-    fontWeight: "600",
+    fontFamily: "Poppins_600SemiBold",
   },
   budgetSubtitle: {
     ...Typography.caption,
@@ -539,7 +543,7 @@ const styles = StyleSheet.create({
   },
   statusBadgeText: {
     ...Typography.caption,
-    fontWeight: "700",
+    fontFamily: "Poppins_700Bold",
     fontSize: 10,
   },
   budgetBody: {
@@ -559,17 +563,18 @@ const styles = StyleSheet.create({
   },
   percentText: {
     ...Typography.caption,
-    fontWeight: "700",
+    fontFamily: "Poppins_700Bold",
   },
   progressTrack: {
-    height: 8,
-    borderRadius: 4,
+    height: 10,
+    borderRadius: 5,
     backgroundColor: Colors.borderLight,
     overflow: "hidden",
+    marginTop: 2,
   },
   progressFill: {
     height: "100%",
-    borderRadius: 4,
+    borderRadius: 5,
   },
   budgetFooter: {
     flexDirection: "row",
@@ -607,7 +612,7 @@ const styles = StyleSheet.create({
   },
   goalPercText: {
     ...Typography.bodyMedium,
-    fontWeight: "700",
+    fontFamily: "Poppins_700Bold",
   },
   goalAmounts: {
     flexDirection: "row",
@@ -629,7 +634,7 @@ const styles = StyleSheet.create({
   goalsSummaryCard: {
     padding: Spacing.base,
     backgroundColor: Colors.successSoft,
-    borderColor: "#C9F2DC",
+    borderColor: "#B8EDD0",
   },
   goalsSummaryRow: {
     flexDirection: "row",
@@ -638,19 +643,22 @@ const styles = StyleSheet.create({
   goalsSummaryStat: {
     flex: 1,
     alignItems: "center",
-    gap: 3,
+    gap: 4,
   },
   goalsSummaryDivider: {
     width: 1,
-    height: 36,
-    backgroundColor: Colors.border,
+    height: 40,
+    backgroundColor: "#C9F2DC",
   },
   goalsSummaryStatLabel: {
     ...Typography.caption,
     color: Colors.textSecondary,
+    fontFamily: "Poppins_600SemiBold",
+    letterSpacing: 0.2,
   },
   goalsSummaryStatValue: {
     ...Typography.h3,
     color: Colors.textPrimary,
+    letterSpacing: -0.3,
   },
 });

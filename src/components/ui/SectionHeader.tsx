@@ -51,16 +51,19 @@ const styles = StyleSheet.create({
   title: {
     ...Typography.h3,
     color: Colors.textPrimary,
+    letterSpacing: -0.2,
   },
   actionContainer: {
-    paddingHorizontal: Spacing.xs,
-    paddingVertical: Spacing.xs,
-    borderRadius: Radius.sm,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
+    borderRadius: Radius.xl,
+    backgroundColor: Colors.primarySoft,
   },
   action: {
     ...Typography.bodySmall,
     color: Colors.primary,
-    fontWeight: "500",
+    fontFamily: "Poppins_600SemiBold",
+    fontSize: 13,
   },
   actionPressed: Pressed.default,
 });

@@ -431,7 +431,7 @@ const styles = StyleSheet.create({
   },
   percent: {
     ...Typography.bodyMedium,
-    fontWeight: "600",
+    fontFamily: "Poppins_600SemiBold",
     marginTop: 2,
   },
   progressTrack: {
@@ -461,7 +461,7 @@ const styles = StyleSheet.create({
   statValue: {
     ...Typography.bodySmall,
     color: Colors.textPrimary,
-    fontWeight: "600",
+    fontFamily: "Poppins_600SemiBold",
   },
   noteBlock: {
     marginTop: Spacing.sm,

@@ -8,6 +8,8 @@ interface IconContainerProps {
   size?: number;
   backgroundColor?: string;
   style?: ViewStyle;
+  /** If true, uses a rounded square (squircle) instead of a circle */
+  squircle?: boolean;
 }
 
 export function IconContainer({
@@ -15,7 +17,10 @@ export function IconContainer({
   size = 40,
   backgroundColor = Colors.primarySoft,
   style,
+  squircle = false,
 }: IconContainerProps) {
+  const borderRadius = squircle ? Math.round(size * 0.28) : size / 2;
+
   return (
     <View
       style={[
@@ -23,11 +28,10 @@ export function IconContainer({
         {
           width: size,
           height: size,
-          borderRadius: size / 2,
+          borderRadius,
           backgroundColor,
         },
         style,
-        Shadows.sm,
       ]}
     >
       {children}

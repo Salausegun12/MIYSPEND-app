@@ -63,12 +63,14 @@ const styles = StyleSheet.create({
   label: {
     ...Typography.label,
     color: Colors.textPrimary,
+    fontFamily: "Poppins_600SemiBold",
+    letterSpacing: 0.2,
   },
   input: {
-    height: 52,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: Radius.lg,
+    height: 54,
+    borderWidth: 1.5,
+    borderColor: Colors.borderLight,
+    borderRadius: Radius.lg + 2,
     backgroundColor: Colors.surface,
     paddingHorizontal: Spacing.base,
     ...Typography.body,
@@ -76,17 +78,27 @@ const styles = StyleSheet.create({
   },
   inputFocused: {
     borderColor: Colors.primary,
-    backgroundColor: Colors.primarySoft + "30",
+    borderWidth: 2,
+    backgroundColor: Colors.primarySoft + "40",
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    elevation: 2,
   },
   inputError: {
     borderColor: Colors.error,
+    borderWidth: 2,
+    backgroundColor: Colors.errorSoft + "40",
   },
   inputDisabled: {
     backgroundColor: Colors.disabledBackground,
     color: Colors.disabledText,
+    borderColor: Colors.border,
   },
   errorText: {
     ...Typography.caption,
     color: Colors.error,
+    fontFamily: "Poppins_600SemiBold",
   },
 });

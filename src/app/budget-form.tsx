@@ -278,7 +278,7 @@ export default function BudgetFormScreen() {
                       <Text
                         style={[
                           styles.chipLabel,
-                          active && { color: cat.color, fontWeight: "600" },
+                          active && { color: cat.color, fontFamily: "Poppins_600SemiBold" },
                         ]}
                       >
                         {cat.name}
@@ -415,6 +415,7 @@ const styles = StyleSheet.create({
   chipPressed: Pressed.default,
   chipIcon: {
     fontSize: 16,
+    fontFamily: "Poppins_400Regular",
     marginRight: Spacing.xs,
   },
   chipLabel: {

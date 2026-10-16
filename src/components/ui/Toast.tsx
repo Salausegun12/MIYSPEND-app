@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
   message: {
     ...Typography.bodySmall,
     color: Colors.white,
-    fontWeight: "600",
+    fontFamily: "Poppins_600SemiBold",
     flexShrink: 1,
   },
 });

@@ -447,7 +447,7 @@ export default function IncomeDetailScreen() {
                       <Text
                         style={[
                           styles.chipLabel,
-                          active && { color, fontWeight: "600" },
+                          active && { color, fontFamily: "Poppins_600SemiBold" },
                         ]}
                       >
                         {option}
@@ -757,7 +757,7 @@ const styles = StyleSheet.create({
   },
   chipLabelActive: {
     color: Colors.primary,
-    fontWeight: "600",
+    fontFamily: "Poppins_600SemiBold",
   },
   noteInput: {
     height: 80,

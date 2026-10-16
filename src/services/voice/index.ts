@@ -1,4 +1,5 @@
 export * from "./types";
+export * from "./language";
 export * from "./parser";
 export * from "./intent";
 export * from "./planning";
